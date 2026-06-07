@@ -60,6 +60,7 @@ async function handleMemberFiles(event) {
         count: members.length,
         members,
         password: rule?.password || SstcCRM.randomPassword(),
+        dataKey: makeDataKey(name),
         passwordSource: rule ? "店櫃代號+電話後五碼" : "未對應，系統隨機",
       };
     })
@@ -92,7 +93,7 @@ async function generateEncryptedData() {
     await ensureLatestSheetPasswords();
     const stores = [];
     for (const store of adminState.stores) {
-      const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.password);
+      const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.dataKey || store.password);
       stores.push({
         id: store.id,
         name: store.name,
@@ -128,9 +129,9 @@ function downloadPasswordList() {
   if (!adminState.stores.length && !adminState.sheetPasswords.length) return;
   syncPasswordsFromTable();
   const sourceRows = adminState.stores.length
-    ? adminState.stores.map((store) => [store.name, store.code, store.phone, store.count, store.password, store.passwordSource])
-    : adminState.sheetPasswords.map((row) => [row.name, row.code, row.phone, "", row.password, "Google Sheet"]);
-  const rows = [["門市", "店櫃代號", "電話", "會員數", "密碼", "來源"], ...sourceRows];
+    ? adminState.stores.map((store) => [store.name, store.code, store.phone, store.count, store.password, store.dataKey, store.passwordSource])
+    : adminState.sheetPasswords.map((row) => [row.name, row.code, row.phone, "", row.password, row.dataKey, "Google Sheet"]);
+  const rows = [["門市", "店櫃代號", "電話", "會員數", "密碼", "資料鑰匙", "來源"], ...sourceRows];
   const csv = rows.map((row) => row.map(SstcCRM.csvCell).join(",")).join("\n");
   SstcCRM.downloadText(`門市密碼清單_${SstcCRM.dateStamp()}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
 }
@@ -178,6 +179,7 @@ function renderPasswordRowsOnly() {
       code: store.code,
       count: store.count,
       password: store.password,
+      dataKey: store.dataKey,
       source: store.passwordSource,
       editable: true,
     }))
@@ -187,6 +189,7 @@ function renderPasswordRowsOnly() {
       code: row.code,
       count: "",
       password: row.password,
+      dataKey: row.dataKey || makeDataKey(row.name),
       source: "Google Sheet",
       editable: false,
     }));
@@ -199,6 +202,7 @@ function renderPasswordRowsOnly() {
       <td>
         <input class="password-cell" data-store-id="${SstcCRM.escapeHtml(store.id)}" type="text" value="${SstcCRM.escapeHtml(store.password)}" ${store.editable ? "" : "readonly"}>
       </td>
+      <td><code>${SstcCRM.escapeHtml(store.dataKey || "")}</code></td>
       <td>${SstcCRM.escapeHtml(store.source)}</td>
     </tr>
   `).join("");
@@ -224,6 +228,7 @@ function applySheetPasswordsToStores() {
     const sheetRow = findSheetPasswordRow(store.name, adminState.sheetPasswords);
     if (sheetRow?.password) {
       store.password = sheetRow.password;
+      store.dataKey = sheetRow.dataKey || store.dataKey || makeDataKey(store.name);
       store.code = store.code || sheetRow.code || "";
       store.phone = store.phone || sheetRow.phone || "";
       store.passwordSource = "Google Sheet";
@@ -290,6 +295,7 @@ function buildSheetPasswordMap(rows) {
       code: pickField(row, ["店櫃代號", "代號"]),
       phone: pickField(row, ["電話", "店櫃電話", "手機"]),
       password: pickField(row, ["密碼", "門市密碼", "password"]),
+      dataKey: pickField(row, ["資料鑰匙", "資料金鑰", "解密鑰匙", "dataKey", "key"]),
     }))
     .filter((row) => row.name && row.password);
 }
@@ -381,7 +387,7 @@ async function buildLatestPackageWithoutDownload() {
   await ensureLatestSheetPasswords();
   const stores = [];
   for (const store of adminState.stores) {
-    const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.password);
+    const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.dataKey || store.password);
     stores.push({
       id: store.id,
       name: store.name,
@@ -454,4 +460,12 @@ function normalizeStoreName(value, keepArea) {
     .replace(/a1館|a館|sogo|park/g, "");
   if (!keepArea) text = text.replace(/台北|台中|台南|高雄|桃園|新竹|南港|林口/g, "");
   return text;
+}
+
+function makeDataKey(storeName) {
+  const existing = adminState.sheetPasswords.find((row) => findSheetPasswordRow(storeName, [row]))?.dataKey;
+  if (existing) return existing;
+  const bytes = crypto.getRandomValues(new Uint8Array(18));
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  return `KEY-${[...bytes].map((byte) => chars[byte % chars.length]).join("")}`;
 }

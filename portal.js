@@ -82,7 +82,8 @@ async function handleLogin(event) {
   els.loginBtn.disabled = true;
   els.loginBtn.textContent = "登入中";
   try {
-    const decrypted = await SstcCRM.decryptJson(selected, password);
+    const dataKey = await resolveLoginKey(selected, password);
+    const decrypted = await SstcCRM.decryptJson(selected, dataKey);
     portalState.currentStore = selected;
     portalState.currentRows = decrypted.members || [];
     renderDashboard();
@@ -92,6 +93,51 @@ async function handleLogin(event) {
     els.loginBtn.disabled = false;
     els.loginBtn.textContent = "進入";
   }
+}
+
+async function resolveLoginKey(store, password) {
+  const apiUrl = window.SSTC_CONFIG?.authApiUrl?.trim();
+  if (!apiUrl) return password;
+  const result = await authWithJsonp(apiUrl, {
+    store: store.name,
+    storeId: store.id,
+    password,
+  });
+  if (!result?.ok || !result.dataKey) {
+    throw new Error("invalid_password");
+  }
+  return result.dataKey;
+}
+
+function authWithJsonp(apiUrl, params) {
+  const callback = `sstcAuthCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const url = new URL(apiUrl);
+  Object.entries({ ...params, callback }).forEach(([key, value]) => url.searchParams.set(key, value));
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("auth_timeout"));
+    }, 15000);
+
+    window[callback] = (payload) => {
+      cleanup();
+      resolve(payload);
+    };
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("auth_failed"));
+    };
+    script.src = url.toString();
+    document.body.appendChild(script);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[callback];
+      script.remove();
+    }
+  });
 }
 
 function logout() {
