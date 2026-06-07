@@ -219,7 +219,7 @@ input[type="file"] {
 }
 
 .login-form {
-  grid-template-columns: minmax(220px, 1.2fr) minmax(180px, 0.8fr) auto;
+  grid-template-columns: minmax(190px, 0.8fr) minmax(240px, 1.2fr) minmax(180px, 0.8fr) auto;
   align-items: end;
 }
 
@@ -428,6 +428,10 @@ td.money,
 td.orders {
   text-align: right;
   white-space: nowrap;
+}
+
+.center-cell {
+  text-align: center;
 }
 
 .level-badge {

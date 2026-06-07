@@ -1,11 +1,13 @@
 const portalState = {
   package: null,
+  visibleStores: [],
   currentStore: null,
   currentRows: [],
 };
 
 const els = {
   dataStatus: document.querySelector("#dataStatus"),
+  storeSearchInput: document.querySelector("#storeSearchInput"),
   storeSelect: document.querySelector("#storeSelect"),
   passwordInput: document.querySelector("#passwordInput"),
   loginBtn: document.querySelector("#loginBtn"),
@@ -31,6 +33,7 @@ const els = {
 };
 
 els.loginForm.addEventListener("submit", handleLogin);
+els.storeSearchInput.addEventListener("input", renderStoreOptions);
 els.logoutBtn.addEventListener("click", logout);
 els.levelFilter.addEventListener("change", renderFiltered);
 els.monthFilter.addEventListener("change", renderFiltered);
@@ -64,26 +67,55 @@ function finishPackageLoad() {
 }
 
 function populateStoreSelect() {
-  const stores = [...portalState.package.stores]
+  portalState.visibleStores = [...portalState.package.stores]
     .filter((store) => isCustomerFacingStore(store))
     .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
-  els.storeSelect.innerHTML = stores.map((store) => (
-    `<option value="${SstcCRM.escapeHtml(store.id)}">${SstcCRM.escapeHtml(store.name)} (${SstcCRM.formatNumber(store.count)})</option>`
-  )).join("");
+  renderStoreOptions();
+  els.storeSearchInput.disabled = false;
   els.storeSelect.disabled = false;
   els.passwordInput.disabled = false;
   els.loginBtn.disabled = false;
 }
 
+function renderStoreOptions() {
+  const keyword = normalizeSearchText(els.storeSearchInput.value);
+  const stores = portalState.visibleStores.filter((store) => {
+    if (!keyword) return true;
+    return normalizeSearchText([
+      store.name,
+      store.storeCode,
+      store.code,
+      store.employeeCode,
+    ].filter(Boolean).join(" ")).includes(keyword);
+  });
+  if (!stores.length) {
+    els.storeSelect.innerHTML = `<option value="">找不到符合的門市</option>`;
+    return;
+  }
+  els.storeSelect.innerHTML = stores.map((store) => (
+    `<option value="${SstcCRM.escapeHtml(store.id)}">${SstcCRM.escapeHtml(storeLabel(store))}</option>`
+  )).join("");
+}
+
 function isCustomerFacingStore(store) {
   const name = String(store.name || "");
   if (!name || name === "未歸屬門市") return false;
-  return true;
+  return !store.hidden;
+}
+
+function storeLabel(store) {
+  const code = store.storeCode || store.code || "";
+  const codeText = code ? `${code}｜` : "";
+  return `${codeText}${store.name} (${SstcCRM.formatNumber(store.count)})`;
+}
+
+function normalizeSearchText(value) {
+  return String(value || "").toLowerCase().replace(/\s+/g, "");
 }
 
 async function handleLogin(event) {
   event.preventDefault();
-  const selected = portalState.package?.stores.find((store) => store.id === els.storeSelect.value);
+  const selected = portalState.visibleStores.find((store) => store.id === els.storeSelect.value);
   const password = els.passwordInput.value.trim();
   if (!selected || !password) return;
 
@@ -173,7 +205,8 @@ function renderDashboard() {
   const avgSales = rows.length ? totalSales / rows.length : 0;
 
   els.currentStoreName.textContent = portalState.currentStore.name;
-  els.currentStoreCode.textContent = portalState.currentStore.code ? `店櫃代號 ${portalState.currentStore.code}` : "門市加密資料已解鎖";
+  const code = portalState.currentStore.storeCode || portalState.currentStore.code || "";
+  els.currentStoreCode.textContent = code ? `店號 ${code}` : "門市加密資料已解鎖";
   els.metricMembers.textContent = SstcCRM.formatNumber(rows.length);
   els.metricThisMonth.textContent = SstcCRM.formatNumber(rows.filter((row) => row.birthdayMonth === nowMonth).length);
   els.metricSales.textContent = SstcCRM.money(totalSales);
