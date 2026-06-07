@@ -1,6 +1,7 @@
 const adminState = {
   members: [],
   stores: [],
+  sheetPasswords: [],
   latestPackageText: "",
 };
 
@@ -31,6 +32,8 @@ adminEls.generateBtn.addEventListener("click", generateEncryptedData);
 adminEls.downloadPasswordsBtn.addEventListener("click", downloadPasswordList);
 adminEls.uploadGithubBtn.addEventListener("click", uploadEncryptedDataToGitHub);
 adminEls.syncSheetBtn.addEventListener("click", syncPasswordsFromGoogleSheet);
+
+loadPasswordsOnOpen();
 
 async function handleMemberFiles(event) {
   const files = [...event.target.files].filter((file) => file.name.toLowerCase().endsWith(".csv"));
@@ -74,19 +77,10 @@ function renderAdminPanel() {
   adminEls.metricBirthdays.textContent = SstcCRM.formatNumber(birthdayCount);
   adminEls.metricNoStore.textContent = SstcCRM.formatNumber(noStoreCount);
   adminEls.storeCountText.textContent = `${SstcCRM.formatNumber(adminState.stores.length)} 家`;
-  adminEls.passwordRows.innerHTML = adminState.stores.map((store) => `
-    <tr>
-      <td>${SstcCRM.escapeHtml(store.name)}</td>
-      <td>${SstcCRM.escapeHtml(store.code || "-")}</td>
-      <td class="orders">${SstcCRM.formatNumber(store.count)}</td>
-      <td>
-        <input class="password-cell" data-store-id="${SstcCRM.escapeHtml(store.id)}" type="text" value="${SstcCRM.escapeHtml(store.password)}">
-      </td>
-      <td>${SstcCRM.escapeHtml(store.passwordSource)}</td>
-    </tr>
-  `).join("");
   adminEls.adminPanel.classList.remove("hidden");
-  if (adminEls.sheetUrl.value.trim()) syncPasswordsFromGoogleSheet({ silent: true });
+  if (adminState.sheetPasswords.length) applySheetPasswordsToStores();
+  renderPasswordRowsOnly();
+  if (!adminState.sheetPasswords.length && adminEls.sheetUrl.value.trim()) syncPasswordsFromGoogleSheet({ silent: true });
 }
 
 async function generateEncryptedData() {
@@ -131,14 +125,18 @@ async function generateEncryptedData() {
 }
 
 function downloadPasswordList() {
-  if (!adminState.stores.length) return;
+  if (!adminState.stores.length && !adminState.sheetPasswords.length) return;
   syncPasswordsFromTable();
-  const rows = [["門市", "店櫃代號", "電話", "會員數", "密碼", "來源"], ...adminState.stores.map((store) => [store.name, store.code, store.phone, store.count, store.password, store.passwordSource])];
+  const sourceRows = adminState.stores.length
+    ? adminState.stores.map((store) => [store.name, store.code, store.phone, store.count, store.password, store.passwordSource])
+    : adminState.sheetPasswords.map((row) => [row.name, row.code, row.phone, "", row.password, "Google Sheet"]);
+  const rows = [["門市", "店櫃代號", "電話", "會員數", "密碼", "來源"], ...sourceRows];
   const csv = rows.map((row) => row.map(SstcCRM.csvCell).join(",")).join("\n");
   SstcCRM.downloadText(`門市密碼清單_${SstcCRM.dateStamp()}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
 }
 
 function syncPasswordsFromTable() {
+  if (!adminState.stores.length) return;
   document.querySelectorAll(".password-cell").forEach((input) => {
     const store = adminState.stores.find((item) => item.id === input.dataset.storeId);
     if (store) store.password = input.value.trim() || store.password;
@@ -146,10 +144,6 @@ function syncPasswordsFromTable() {
 }
 
 async function syncPasswordsFromGoogleSheet(options = {}) {
-  if (!adminState.stores.length) {
-    if (!options.silent) alert("請先上傳會員 CSV，讓系統產生門市表格。");
-    return;
-  }
   const url = adminEls.sheetUrl.value.trim();
   if (!url) {
     if (!options.silent) alert("請貼上 Google Sheet 連結。");
@@ -160,21 +154,14 @@ async function syncPasswordsFromGoogleSheet(options = {}) {
   adminEls.sheetStatus.textContent = "同步中...";
   try {
     const rows = await loadGoogleSheetRows(url);
-    const passwordMap = buildSheetPasswordMap(rows);
-    let matched = 0;
-    for (const store of adminState.stores) {
-      const sheetRow = findSheetPasswordRow(store.name, passwordMap);
-      if (sheetRow?.password) {
-        store.password = sheetRow.password;
-        store.code = store.code || sheetRow.code || "";
-        store.phone = store.phone || sheetRow.phone || "";
-        store.passwordSource = "Google Sheet";
-        matched += 1;
-      }
-    }
+    adminState.sheetPasswords = buildSheetPasswordMap(rows);
+    const matched = applySheetPasswordsToStores();
     adminState.latestPackageText = "";
     renderPasswordRowsOnly();
-    adminEls.sheetStatus.textContent = `已同步 ${matched} 家`;
+    adminEls.adminPanel.classList.remove("hidden");
+    adminEls.sheetStatus.textContent = adminState.stores.length
+      ? `已同步 ${matched} / ${adminState.sheetPasswords.length} 家`
+      : `已讀取 ${adminState.sheetPasswords.length} 家密碼`;
   } catch (error) {
     adminEls.sheetStatus.textContent = "同步失敗";
     if (!options.silent) alert(error.message);
@@ -184,17 +171,66 @@ async function syncPasswordsFromGoogleSheet(options = {}) {
 }
 
 function renderPasswordRowsOnly() {
-  adminEls.passwordRows.innerHTML = adminState.stores.map((store) => `
+  const rows = adminState.stores.length
+    ? adminState.stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+      code: store.code,
+      count: store.count,
+      password: store.password,
+      source: store.passwordSource,
+      editable: true,
+    }))
+    : adminState.sheetPasswords.map((row) => ({
+      id: SstcCRM.storeId(row.name),
+      name: row.name,
+      code: row.code,
+      count: "",
+      password: row.password,
+      source: "Google Sheet",
+      editable: false,
+    }));
+  adminEls.storeCountText.textContent = `${SstcCRM.formatNumber(rows.length)} 家`;
+  adminEls.passwordRows.innerHTML = rows.map((store) => `
     <tr>
       <td>${SstcCRM.escapeHtml(store.name)}</td>
       <td>${SstcCRM.escapeHtml(store.code || "-")}</td>
-      <td class="orders">${SstcCRM.formatNumber(store.count)}</td>
+      <td class="orders">${store.count === "" ? "-" : SstcCRM.formatNumber(store.count)}</td>
       <td>
-        <input class="password-cell" data-store-id="${SstcCRM.escapeHtml(store.id)}" type="text" value="${SstcCRM.escapeHtml(store.password)}">
+        <input class="password-cell" data-store-id="${SstcCRM.escapeHtml(store.id)}" type="text" value="${SstcCRM.escapeHtml(store.password)}" ${store.editable ? "" : "readonly"}>
       </td>
-      <td>${SstcCRM.escapeHtml(store.passwordSource)}</td>
+      <td>${SstcCRM.escapeHtml(store.source)}</td>
     </tr>
   `).join("");
+}
+
+async function loadPasswordsOnOpen() {
+  if (!adminEls.sheetUrl.value.trim()) return;
+  setStatus("讀取 Google Sheet 密碼表中...");
+  await syncPasswordsFromGoogleSheet({ silent: true });
+  if (!adminState.members.length) {
+    adminEls.metricMembers.textContent = "0";
+    adminEls.metricStores.textContent = "0";
+    adminEls.metricBirthdays.textContent = "0";
+    adminEls.metricNoStore.textContent = "0";
+    setStatus("已載入密碼表，尚未匯入會員資料");
+  }
+}
+
+function applySheetPasswordsToStores() {
+  if (!adminState.stores.length || !adminState.sheetPasswords.length) return 0;
+  let matched = 0;
+  for (const store of adminState.stores) {
+    const sheetRow = findSheetPasswordRow(store.name, adminState.sheetPasswords);
+    if (sheetRow?.password) {
+      store.password = sheetRow.password;
+      store.code = store.code || sheetRow.code || "";
+      store.phone = store.phone || sheetRow.phone || "";
+      store.passwordSource = "Google Sheet";
+      matched += 1;
+    }
+  }
+  return matched;
 }
 
 function loadGoogleSheetRows(url) {
