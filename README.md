@@ -21,6 +21,18 @@
 
 門市網址不需要更換。門市只要重新整理 `index.html` 對應的 GitHub Pages 網址，就會讀到新的加密資料。
 
+## 一鍵更新 GitHub
+
+產生新的 `encrypted-data.js` 後，可以直接執行：
+
+```text
+update-github.bat
+```
+
+它會自動尋找下載資料夾中最新的 `encrypted-data.js`，複製到 `data/encrypted-data.js`，提交並推送到 GitHub。
+
+如果檔案已經放在 `data/encrypted-data.js`，也可以直接執行同一個腳本。
+
 ## 門市使用流程
 
 1. 打開 GitHub Pages 網址
