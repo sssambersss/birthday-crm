@@ -70,6 +70,22 @@
           <span>平均客單</span>
           <strong id="metricAvg">$0</strong>
         </div>
+        <div class="metric">
+          <span>高消費會員</span>
+          <strong id="metricHighValue">0</strong>
+        </div>
+        <div class="metric">
+          <span>有地區資料</span>
+          <strong id="metricArea">0</strong>
+        </div>
+        <div class="metric">
+          <span>App 安裝</span>
+          <strong id="metricApp">0%</strong>
+        </div>
+        <div class="metric">
+          <span>可簡訊經營</span>
+          <strong id="metricSms">0%</strong>
+        </div>
       </div>
 
       <div class="visual-grid">
@@ -80,6 +96,14 @@
         <section class="chart-panel">
           <h3>卡別人數</h3>
           <canvas id="levelChart" width="900" height="320"></canvas>
+        </section>
+        <section class="chart-panel">
+          <h3>消費級距</h3>
+          <canvas id="salesChart" width="900" height="320"></canvas>
+        </section>
+        <section class="chart-panel">
+          <h3>主要地區</h3>
+          <canvas id="areaChart" width="900" height="320"></canvas>
         </section>
       </div>
 
@@ -92,11 +116,62 @@
           <span>生日月份</span>
           <select id="monthFilter"></select>
         </label>
+        <label>
+          <span>消費級距</span>
+          <select id="salesRangeFilter"></select>
+        </label>
+        <label>
+          <span>訂單次數</span>
+          <select id="orderRangeFilter"></select>
+        </label>
+        <label>
+          <span>地區</span>
+          <select id="areaFilter"></select>
+        </label>
+        <label>
+          <span>經營狀態</span>
+          <select id="contactFilter"></select>
+        </label>
+        <label>
+          <span>排序 / 前幾名</span>
+          <select id="rankFilter"></select>
+        </label>
         <label class="search-box">
           <span>搜尋</span>
           <input id="searchInput" type="search" placeholder="姓名、手機、Email、會員編號">
         </label>
         <button id="exportCsvBtn" type="button">匯出目前名單</button>
+      </section>
+
+      <section class="insight-grid" aria-label="客戶經營分析">
+        <section class="insight-panel">
+          <div class="board-head">
+            <h3>高價值客人</h3>
+            <span id="topCustomerCount">0 筆</span>
+          </div>
+          <div id="topCustomers" class="mini-list"></div>
+        </section>
+        <section class="insight-panel">
+          <div class="board-head">
+            <h3>地區排行</h3>
+            <span id="areaSummaryCount">0 區</span>
+          </div>
+          <div id="areaSummary" class="mini-list"></div>
+        </section>
+        <section class="insight-panel">
+          <div class="board-head">
+            <h3>卡別 × 消費級距</h3>
+            <span id="matrixCount">0 筆</span>
+          </div>
+          <div id="segmentMatrix" class="matrix-wrap"></div>
+        </section>
+        <section class="insight-panel">
+          <div class="board-head">
+            <h3>可優先經營名單</h3>
+            <span id="actionListCount">0 組</span>
+          </div>
+          <div id="actionLists" class="mini-list"></div>
+        </section>
       </section>
 
       <section class="birthday-board">

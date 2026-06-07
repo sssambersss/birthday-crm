@@ -3,7 +3,47 @@ const portalState = {
   visibleStores: [],
   currentStore: null,
   currentRows: [],
+  filteredRows: [],
 };
+
+const salesRanges = [
+  { id: "all", label: "全部消費", min: 0, max: Infinity },
+  { id: "0", label: "未消費", min: 0, max: 0 },
+  { id: "1-3000", label: "1-3,000", min: 1, max: 3000 },
+  { id: "3001-10000", label: "3,001-10,000", min: 3001, max: 10000 },
+  { id: "10001-30000", label: "10,001-30,000", min: 10001, max: 30000 },
+  { id: "30001-100000", label: "30,001-100,000", min: 30001, max: 100000 },
+  { id: "100001", label: "100,001 以上", min: 100001, max: Infinity },
+];
+
+const orderRanges = [
+  { id: "all", label: "全部訂單", min: 0, max: Infinity },
+  { id: "0", label: "0 次", min: 0, max: 0 },
+  { id: "1", label: "1 次", min: 1, max: 1 },
+  { id: "2-3", label: "2-3 次", min: 2, max: 3 },
+  { id: "4-6", label: "4-6 次", min: 4, max: 6 },
+  { id: "7", label: "7 次以上", min: 7, max: Infinity },
+];
+
+const contactOptions = [
+  { id: "all", label: "全部狀態" },
+  { id: "app", label: "已安裝 App" },
+  { id: "push", label: "可推播" },
+  { id: "sms", label: "可簡訊" },
+  { id: "line", label: "已綁 LINE" },
+  { id: "no-phone", label: "缺手機" },
+  { id: "no-email", label: "缺 Email" },
+];
+
+const rankOptions = [
+  { id: "birthday", label: "生日排序" },
+  { id: "sales-desc", label: "消費高到低" },
+  { id: "orders-desc", label: "訂單多到少" },
+  { id: "points-desc", label: "點數多到少" },
+  { id: "top10", label: "消費前 10 名" },
+  { id: "top20", label: "消費前 20 名" },
+  { id: "top50", label: "消費前 50 名" },
+];
 
 const els = {
   dataStatus: document.querySelector("#dataStatus"),
@@ -21,14 +61,33 @@ const els = {
   metricThisMonth: document.querySelector("#metricThisMonth"),
   metricSales: document.querySelector("#metricSales"),
   metricAvg: document.querySelector("#metricAvg"),
+  metricHighValue: document.querySelector("#metricHighValue"),
+  metricArea: document.querySelector("#metricArea"),
+  metricApp: document.querySelector("#metricApp"),
+  metricSms: document.querySelector("#metricSms"),
   levelFilter: document.querySelector("#levelFilter"),
   monthFilter: document.querySelector("#monthFilter"),
+  salesRangeFilter: document.querySelector("#salesRangeFilter"),
+  orderRangeFilter: document.querySelector("#orderRangeFilter"),
+  areaFilter: document.querySelector("#areaFilter"),
+  contactFilter: document.querySelector("#contactFilter"),
+  rankFilter: document.querySelector("#rankFilter"),
   searchInput: document.querySelector("#searchInput"),
   resultTitle: document.querySelector("#resultTitle"),
   resultCount: document.querySelector("#resultCount"),
   monthGroups: document.querySelector("#monthGroups"),
   monthChart: document.querySelector("#monthChart"),
   levelChart: document.querySelector("#levelChart"),
+  salesChart: document.querySelector("#salesChart"),
+  areaChart: document.querySelector("#areaChart"),
+  topCustomers: document.querySelector("#topCustomers"),
+  topCustomerCount: document.querySelector("#topCustomerCount"),
+  areaSummary: document.querySelector("#areaSummary"),
+  areaSummaryCount: document.querySelector("#areaSummaryCount"),
+  segmentMatrix: document.querySelector("#segmentMatrix"),
+  matrixCount: document.querySelector("#matrixCount"),
+  actionLists: document.querySelector("#actionLists"),
+  actionListCount: document.querySelector("#actionListCount"),
   exportCsvBtn: document.querySelector("#exportCsvBtn"),
 };
 
@@ -37,10 +96,16 @@ els.storeSearchInput.addEventListener("input", renderStoreOptions);
 els.logoutBtn.addEventListener("click", logout);
 els.levelFilter.addEventListener("change", renderFiltered);
 els.monthFilter.addEventListener("change", renderFiltered);
+els.salesRangeFilter.addEventListener("change", renderFiltered);
+els.orderRangeFilter.addEventListener("change", renderFiltered);
+els.areaFilter.addEventListener("change", renderFiltered);
+els.contactFilter.addEventListener("change", renderFiltered);
+els.rankFilter.addEventListener("change", renderFiltered);
 els.searchInput.addEventListener("input", renderFiltered);
 els.exportCsvBtn.addEventListener("click", exportCurrentCsv);
 
 seedMonthFilter();
+seedStaticFilters();
 loadEncryptedPackage();
 
 async function loadEncryptedPackage() {
@@ -130,7 +195,7 @@ async function handleLogin(event) {
       throw new Error("decrypt_failed");
     }
     portalState.currentStore = selected;
-    portalState.currentRows = decrypted.members || [];
+    portalState.currentRows = (decrypted.members || []).map(enrichMember);
     renderDashboard();
   } catch (error) {
     const messages = {
@@ -198,11 +263,25 @@ function logout() {
   els.passwordInput.value = "";
 }
 
+function enrichMember(row) {
+  return {
+    ...row,
+    birthdayYear: row.birthdayYear || SstcCRM.birthdayYear(row.birthday),
+    birthdayMonth: row.birthdayMonth || SstcCRM.birthdayMonth(row.birthday),
+    birthdayDay: row.birthdayDay || SstcCRM.birthdayDay(row.birthday),
+    age: row.age || SstcCRM.ageFromBirthday(row.birthday),
+  };
+}
+
 function renderDashboard() {
   const rows = portalState.currentRows;
   const nowMonth = new Date().getMonth() + 1;
   const totalSales = SstcCRM.sum(rows, "sales");
   const avgSales = rows.length ? totalSales / rows.length : 0;
+  const highValueFloor = highValueThreshold(rows);
+  const withArea = rows.filter((row) => areaName(row)).length;
+  const appCount = rows.filter((row) => yesLike(row.app)).length;
+  const smsCount = rows.filter((row) => yesLike(row.sms)).length;
 
   els.currentStoreName.textContent = portalState.currentStore.name;
   const code = portalState.currentStore.storeCode || portalState.currentStore.code || "";
@@ -211,10 +290,20 @@ function renderDashboard() {
   els.metricThisMonth.textContent = SstcCRM.formatNumber(rows.filter((row) => row.birthdayMonth === nowMonth).length);
   els.metricSales.textContent = SstcCRM.money(totalSales);
   els.metricAvg.textContent = SstcCRM.money(avgSales);
+  els.metricHighValue.textContent = SstcCRM.formatNumber(rows.filter((row) => row.sales >= highValueFloor && row.sales > 0).length);
+  els.metricArea.textContent = SstcCRM.formatNumber(withArea);
+  els.metricApp.textContent = percent(appCount, rows.length);
+  els.metricSms.textContent = percent(smsCount, rows.length);
   els.dashboard.classList.remove("hidden");
 
   seedLevelFilter(rows);
+  seedAreaFilter(rows);
   els.monthFilter.value = "all";
+  els.salesRangeFilter.value = "all";
+  els.orderRangeFilter.value = "all";
+  els.areaFilter.value = "all";
+  els.contactFilter.value = "all";
+  els.rankFilter.value = "birthday";
   els.searchInput.value = "";
   drawCharts(rows);
   renderFiltered();
@@ -233,22 +322,49 @@ function seedMonthFilter() {
   )).join("");
 }
 
+function seedStaticFilters() {
+  els.salesRangeFilter.innerHTML = salesRanges.map((range) => `<option value="${range.id}">${range.label}</option>`).join("");
+  els.orderRangeFilter.innerHTML = orderRanges.map((range) => `<option value="${range.id}">${range.label}</option>`).join("");
+  els.contactFilter.innerHTML = contactOptions.map((item) => `<option value="${item.id}">${item.label}</option>`).join("");
+  els.rankFilter.innerHTML = rankOptions.map((item) => `<option value="${item.id}">${item.label}</option>`).join("");
+}
+
+function seedAreaFilter(rows) {
+  const areas = [...new Set(rows.map(areaName).filter(Boolean))].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+  els.areaFilter.innerHTML = `<option value="all">全部地區</option>` + areas.map((area) => (
+    `<option value="${SstcCRM.escapeHtml(area)}">${SstcCRM.escapeHtml(area)}</option>`
+  )).join("");
+}
+
 function renderFiltered() {
   const level = els.levelFilter.value;
   const month = els.monthFilter.value;
+  const salesRange = salesRanges.find((range) => range.id === els.salesRangeFilter.value) || salesRanges[0];
+  const orderRange = orderRanges.find((range) => range.id === els.orderRangeFilter.value) || orderRanges[0];
+  const area = els.areaFilter.value;
+  const contact = els.contactFilter.value;
+  const rank = els.rankFilter.value;
   const keyword = SstcCRM.clean(els.searchInput.value).toLowerCase();
   let rows = portalState.currentRows.filter((row) => {
     if (level !== "all" && row.level !== level) return false;
     if (month !== "all" && row.birthdayMonth !== Number(month)) return false;
+    if (!inRange(row.sales, salesRange)) return false;
+    if (!inRange(row.orders, orderRange)) return false;
+    if (area !== "all" && areaName(row) !== area) return false;
+    if (!matchesContact(row, contact)) return false;
     if (!keyword) return true;
-    return [row.name, row.phone, row.email, row.brandId, row.onlineId].some((value) => String(value).toLowerCase().includes(keyword));
+    return [row.name, row.phone, row.email, row.brandId, row.onlineId, row.city, row.district, row.note].some((value) => String(value).toLowerCase().includes(keyword));
   });
 
-  rows = rows.sort((a, b) => (a.birthdayMonth || 99) - (b.birthdayMonth || 99) || (a.birthdayDay || 99) - (b.birthdayDay || 99) || b.sales - a.sales);
+  rows = sortRows(rows, rank);
+  rows = limitRows(rows, rank);
+  portalState.filteredRows = rows;
   const levelText = level === "all" ? "全部卡別" : level;
   const monthText = month === "all" ? "全部月份" : `${month}月`;
-  els.resultTitle.textContent = `${levelText}｜${monthText}`;
+  const salesText = salesRange.id === "all" ? "全部消費" : salesRange.label;
+  els.resultTitle.textContent = `${levelText}｜${monthText}｜${salesText}`;
   els.resultCount.textContent = `${SstcCRM.formatNumber(rows.length)} 筆`;
+  renderInsights(rows);
   renderMonthGroups(rows, month);
 }
 
@@ -267,6 +383,7 @@ function renderMonthGroups(rows, selectedMonth) {
             <thead>
               <tr>
                 <th>生日</th>
+                <th>年齡</th>
                 <th>卡別</th>
                 <th>姓名</th>
                 <th>手機</th>
@@ -286,41 +403,231 @@ function renderMonthGroups(rows, selectedMonth) {
   }).join("");
 }
 
+function renderInsights(rows) {
+  renderTopCustomers(rows);
+  renderAreaSummary(rows);
+  renderSegmentMatrix(rows);
+  renderActionLists(rows);
+}
+
+function renderTopCustomers(rows) {
+  const topRows = [...rows].sort((a, b) => b.sales - a.sales || b.orders - a.orders).slice(0, 10);
+  els.topCustomerCount.textContent = `${SstcCRM.formatNumber(topRows.length)} 筆`;
+  els.topCustomers.innerHTML = topRows.length ? topRows.map((row, index) => `
+    <div class="mini-row">
+      <strong>${index + 1}. ${SstcCRM.escapeHtml(row.name)}</strong>
+      <span>${SstcCRM.escapeHtml(row.level)}｜${SstcCRM.money(row.sales)}｜${SstcCRM.formatNumber(row.orders)} 單</span>
+    </div>
+  `).join("") : `<div class="empty compact-empty">目前沒有符合條件的高價值客人。</div>`;
+}
+
+function renderAreaSummary(rows) {
+  const areas = countBy(rows, areaName).filter((item) => item.label);
+  els.areaSummaryCount.textContent = `${SstcCRM.formatNumber(areas.length)} 區`;
+  els.areaSummary.innerHTML = areas.slice(0, 10).map((item) => `
+    <div class="mini-row">
+      <strong>${SstcCRM.escapeHtml(item.label)}</strong>
+      <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
+    </div>
+  `).join("") || `<div class="empty compact-empty">目前沒有地區資料。</div>`;
+}
+
+function renderSegmentMatrix(rows) {
+  const levels = [...new Set(rows.map((row) => row.level))].sort(SstcCRM.levelSorter);
+  const ranges = salesRanges.filter((range) => range.id !== "all");
+  els.matrixCount.textContent = `${SstcCRM.formatNumber(rows.length)} 筆`;
+  if (!rows.length) {
+    els.segmentMatrix.innerHTML = `<div class="empty compact-empty">目前沒有符合條件的資料。</div>`;
+    return;
+  }
+  els.segmentMatrix.innerHTML = `
+    <table class="matrix-table">
+      <thead>
+        <tr>
+          <th>卡別</th>
+          ${ranges.map((range) => `<th>${range.label}</th>`).join("")}
+        </tr>
+      </thead>
+      <tbody>
+        ${levels.map((level) => `
+          <tr>
+            <th>${SstcCRM.escapeHtml(level)}</th>
+            ${ranges.map((range) => `<td>${SstcCRM.formatNumber(rows.filter((row) => row.level === level && inRange(row.sales, range)).length)}</td>`).join("")}
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+}
+
+function renderActionLists(rows) {
+  const nowMonth = new Date().getMonth() + 1;
+  const nextMonth = nowMonth === 12 ? 1 : nowMonth + 1;
+  const highValueFloor = highValueThreshold(portalState.currentRows);
+  const groups = [
+    {
+      title: "本月生日高消費",
+      rows: rows.filter((row) => row.birthdayMonth === nowMonth && row.sales >= highValueFloor).sort((a, b) => b.sales - a.sales),
+    },
+    {
+      title: "下月生日可預約",
+      rows: rows.filter((row) => row.birthdayMonth === nextMonth).sort((a, b) => b.sales - a.sales),
+    },
+    {
+      title: "消費高但訂單少",
+      rows: rows.filter((row) => row.sales >= highValueFloor && row.orders <= 2).sort((a, b) => b.sales - a.sales),
+    },
+    {
+      title: "有點數可提醒",
+      rows: rows.filter((row) => row.points > 0).sort((a, b) => b.points - a.points),
+    },
+  ].filter((group) => group.rows.length);
+
+  els.actionListCount.textContent = `${SstcCRM.formatNumber(groups.length)} 組`;
+  els.actionLists.innerHTML = groups.length ? groups.map((group) => {
+    const top = group.rows.slice(0, 5);
+    return `
+      <div class="mini-group">
+        <strong>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.rows.length)} 人</strong>
+        ${top.map((row) => `<span>${SstcCRM.escapeHtml(row.name)}｜${SstcCRM.money(row.sales)}｜${SstcCRM.formatBirthday(row.birthday)}</span>`).join("")}
+      </div>
+    `;
+  }).join("") : `<div class="empty compact-empty">目前沒有可優先經營名單。</div>`;
+}
+
 function drawCharts(rows) {
   const months = Array(12).fill(0);
   const levels = new Map();
+  const salesBuckets = salesRanges.filter((range) => range.id !== "all").map((range) => ({ label: range.label, value: 0, range }));
+  const areas = countBy(rows, areaName).filter((item) => item.label).slice(0, 8);
   for (const row of rows) {
     if (row.birthdayMonth) months[row.birthdayMonth - 1] += 1;
     levels.set(row.level, (levels.get(row.level) || 0) + 1);
+    const bucket = salesBuckets.find((item) => inRange(row.sales, item.range));
+    if (bucket) bucket.value += 1;
   }
   SstcCRM.drawBarChart(els.monthChart, months.map((value, i) => ({ label: `${i + 1}月`, value })), "#c98f95");
   SstcCRM.drawBarChart(els.levelChart, [...levels].sort((a, b) => SstcCRM.levelSorter(a[0], b[0])).map(([label, value]) => ({ label, value })), "#7e7a80");
+  SstcCRM.drawBarChart(els.salesChart, salesBuckets.map(({ label, value }) => ({ label, value })), "#a7785d");
+  SstcCRM.drawBarChart(els.areaChart, areas.map((item) => ({ label: item.label.slice(0, 5), value: item.count })), "#7b8794");
 }
 
 function exportCurrentCsv() {
-  const rows = [...document.querySelectorAll("tbody tr")].map((tr) => [...tr.children].map((td) => td.innerText.replace(/\n/g, " ")));
+  const rows = portalState.filteredRows;
   if (!rows.length) return;
-  const header = ["生日", "卡別", "姓名", "手機", "Email", "消費", "訂單", "點數", "地區", "註記"];
+  const header = ["生日", "年齡", "卡別", "姓名", "手機", "Email", "總消費", "門市消費", "線上消費", "訂單", "點數", "縣市", "行政區", "App", "推播", "簡訊", "LINE綁定", "會員編號", "註記"];
   const exportedAt = new Date().toLocaleString("zh-TW", { hour12: false });
   const levelText = els.levelFilter.value === "all" ? "全部卡別" : els.levelFilter.value;
   const monthText = els.monthFilter.value === "all" ? "全部月份" : `${els.monthFilter.value}月`;
+  const salesText = (salesRanges.find((range) => range.id === els.salesRangeFilter.value) || salesRanges[0]).label;
+  const orderText = (orderRanges.find((range) => range.id === els.orderRangeFilter.value) || orderRanges[0]).label;
+  const areaText = els.areaFilter.value === "all" ? "全部地區" : els.areaFilter.value;
+  const contactText = contactOptions.find((item) => item.id === els.contactFilter.value)?.label || "全部狀態";
+  const rankText = rankOptions.find((item) => item.id === els.rankFilter.value)?.label || "生日排序";
   const keywordText = SstcCRM.clean(els.searchInput.value) || "無";
   const metaRows = [
     ["匯出時間", exportedAt],
     ["店家", portalState.currentStore?.name || "未選擇"],
     ["卡別條件", levelText],
     ["生日月份條件", monthText],
+    ["消費級距", salesText],
+    ["訂單次數", orderText],
+    ["地區條件", areaText],
+    ["經營狀態", contactText],
+    ["排序條件", rankText],
     ["搜尋條件", keywordText],
     ["資料筆數", rows.length],
     [],
   ];
-  const csv = [...metaRows, header, ...rows].map((row) => row.map(SstcCRM.csvCell).join(",")).join("\n");
+  const bodyRows = rows.map((row) => [
+    SstcCRM.formatBirthday(row.birthday),
+    row.age || SstcCRM.ageFromBirthday(row.birthday) || "",
+    row.level,
+    row.name,
+    row.phone,
+    row.email,
+    row.sales,
+    row.storeSales,
+    row.onlineSales,
+    row.orders,
+    row.points,
+    row.city,
+    row.district,
+    row.app,
+    row.push,
+    row.sms,
+    row.lineDate,
+    row.brandId || row.onlineId,
+    row.note,
+  ]);
+  const csv = [...metaRows, header, ...bodyRows].map((row) => row.map(SstcCRM.csvCell).join(",")).join("\n");
   const fileParts = [
     portalState.currentStore?.name || "生日名單",
     levelText,
     monthText,
+    salesText,
     `${rows.length}筆`,
     SstcCRM.dateStamp(),
   ].map(SstcCRM.safeFileName).filter(Boolean);
   SstcCRM.downloadText(`${fileParts.join("_")}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
+}
+
+function inRange(value, range) {
+  const number = Number(value) || 0;
+  return number >= range.min && number <= range.max;
+}
+
+function sortRows(rows, rank) {
+  const birthdaySort = (a, b) => (a.birthdayMonth || 99) - (b.birthdayMonth || 99) || (a.birthdayDay || 99) - (b.birthdayDay || 99) || b.sales - a.sales;
+  if (rank === "sales-desc" || rank.startsWith("top")) return [...rows].sort((a, b) => b.sales - a.sales || b.orders - a.orders || birthdaySort(a, b));
+  if (rank === "orders-desc") return [...rows].sort((a, b) => b.orders - a.orders || b.sales - a.sales || birthdaySort(a, b));
+  if (rank === "points-desc") return [...rows].sort((a, b) => b.points - a.points || b.sales - a.sales || birthdaySort(a, b));
+  return [...rows].sort(birthdaySort);
+}
+
+function limitRows(rows, rank) {
+  const match = String(rank).match(/^top(\d+)$/);
+  return match ? rows.slice(0, Number(match[1])) : rows;
+}
+
+function matchesContact(row, contact) {
+  if (contact === "app") return yesLike(row.app);
+  if (contact === "push") return yesLike(row.push);
+  if (contact === "sms") return yesLike(row.sms);
+  if (contact === "line") return Boolean(row.lineDate);
+  if (contact === "no-phone") return !row.phone;
+  if (contact === "no-email") return !row.email;
+  return true;
+}
+
+function yesLike(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (!text || ["否", "不", "未", "no", "false", "0"].some((word) => text.includes(word))) return false;
+  return ["是", "yes", "true", "1", "y", "有", "已安裝", "同意"].some((word) => text.includes(word.toLowerCase()));
+}
+
+function areaName(row) {
+  return [row.city, row.district].filter(Boolean).join(" ");
+}
+
+function countBy(rows, labeler) {
+  const map = new Map();
+  for (const row of rows) {
+    const label = labeler(row) || "";
+    const item = map.get(label) || { label, count: 0, sales: 0 };
+    item.count += 1;
+    item.sales += Number(row.sales) || 0;
+    map.set(label, item);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count || b.sales - a.sales || a.label.localeCompare(b.label, "zh-Hant"));
+}
+
+function highValueThreshold(rows) {
+  const values = rows.map((row) => Number(row.sales) || 0).filter((value) => value > 0).sort((a, b) => b - a);
+  if (!values.length) return Infinity;
+  return Math.max(10000, values[Math.min(values.length - 1, Math.floor(values.length * 0.2))]);
+}
+
+function percent(count, total) {
+  return total ? `${Math.round(count * 100 / total)}%` : "0%";
 }

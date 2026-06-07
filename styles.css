@@ -354,6 +354,24 @@ button:disabled {
   margin-bottom: 18px;
 }
 
+.insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.insight-panel {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.insight-panel .board-head {
+  margin-bottom: 12px;
+}
+
 .chart-panel {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -369,7 +387,7 @@ button:disabled {
 }
 
 .filter-strip {
-  grid-template-columns: minmax(140px, 0.7fr) minmax(140px, 0.7fr) minmax(220px, 1.4fr) auto;
+  grid-template-columns: repeat(5, minmax(130px, 1fr)) minmax(220px, 1.4fr) auto;
   align-items: end;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
@@ -430,6 +448,57 @@ td.orders {
   white-space: nowrap;
 }
 
+.mini-list {
+  display: grid;
+  gap: 8px;
+}
+
+.mini-row,
+.mini-group {
+  display: grid;
+  gap: 4px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+
+.mini-row:first-child,
+.mini-group:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.mini-row strong,
+.mini-group strong {
+  font-weight: 800;
+}
+
+.mini-row span,
+.mini-group span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.matrix-wrap {
+  overflow-x: auto;
+}
+
+.matrix-table {
+  min-width: 680px;
+}
+
+.matrix-table th,
+.matrix-table td {
+  text-align: right;
+}
+
+.matrix-table th:first-child {
+  text-align: left;
+}
+
+.compact-empty {
+  padding: 8px 0;
+}
+
 .center-cell {
   text-align: center;
 }
@@ -464,6 +533,7 @@ td.orders {
   .login-form,
   .metric-grid,
   .visual-grid,
+  .insight-grid,
   .filter-strip,
   .admin-actions,
   .github-grid,

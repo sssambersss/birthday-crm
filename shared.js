@@ -62,7 +62,7 @@ window.SstcCRM = (() => {
     }
 
     return rows.slice(1).map((row) => {
-      const birthday = clean(row[index["生日"]]);
+      const birthday = normalizeBirthday(clean(row[index["生日"]]));
       const store = clean(row[index["加入門市名稱"]]) || "未歸屬門市";
       return {
         id: clean(row[index["品牌會員編號"]]) || clean(row[index["線上會員編號"]]) || `${sourceName}-${Math.random()}`,
@@ -82,8 +82,10 @@ window.SstcCRM = (() => {
         level: clean(row[index["會員等級"]]) || "未分級",
         levelExpire: clean(row[index["會員等級到期日"]]),
         birthday,
+        birthdayYear: birthdayYear(birthday),
         birthdayMonth: birthdayMonth(birthday),
         birthdayDay: birthdayDay(birthday),
+        age: ageFromBirthday(birthday),
         registerChannel: clean(row[index["註冊管道"]]),
         store,
         sales: toNumber(row[index["訂單金額 (TG)"]]),
@@ -179,9 +181,11 @@ window.SstcCRM = (() => {
 
   function renderMemberRow(row) {
     const area = [row.city, row.district].filter(Boolean).join(" ");
+    const age = row.age || ageFromBirthday(row.birthday) || "";
     return `
       <tr>
         <td>${escapeHtml(formatBirthday(row.birthday))}</td>
+        <td class="orders">${escapeHtml(age || "-")}</td>
         <td><span class="level-badge">${escapeHtml(row.level)}</span></td>
         <td>${escapeHtml(row.name)}<br><small>${escapeHtml(row.brandId || row.onlineId)}</small></td>
         <td>${escapeHtml(row.phone)}</td>
@@ -240,18 +244,47 @@ window.SstcCRM = (() => {
   }
 
   function birthdayMonth(value) {
-    const match = String(value).match(/^\d{4}-(\d{2})-(\d{2})$/);
+    const match = String(value).replace(/[/.]/g, "-").match(/^(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/);
     return match ? Number(match[1]) : 0;
   }
 
   function birthdayDay(value) {
-    const match = String(value).match(/^\d{4}-(\d{2})-(\d{2})$/);
+    const match = String(value).replace(/[/.]/g, "-").match(/^(?:\d{4}-)?(\d{1,2})-(\d{1,2})$/);
     return match ? Number(match[2]) : 0;
   }
 
+  function birthdayYear(value) {
+    const match = String(value).replace(/[/.]/g, "-").match(/^(\d{4})-/);
+    return match ? Number(match[1]) : 0;
+  }
+
+  function ageFromBirthday(value) {
+    const year = birthdayYear(value);
+    const month = birthdayMonth(value);
+    const day = birthdayDay(value);
+    if (!year || !month || !day) return 0;
+    const now = new Date();
+    let age = now.getFullYear() - year;
+    if (now.getMonth() + 1 < month || (now.getMonth() + 1 === month && now.getDate() < day)) age -= 1;
+    return age > 0 && age < 120 ? age : 0;
+  }
+
   function formatBirthday(value) {
-    const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-    return match ? `${Number(match[2])}/${Number(match[3])}` : value || "-";
+    const text = String(value).replace(/[/.]/g, "-");
+    const full = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (full) return `${full[1]}/${String(Number(full[2])).padStart(2, "0")}/${String(Number(full[3])).padStart(2, "0")}`;
+    const partial = text.match(/^(\d{1,2})-(\d{1,2})$/);
+    if (partial) return `${Number(partial[1])}/${Number(partial[2])}`;
+    return value || "-";
+  }
+
+  function normalizeBirthday(value) {
+    const text = clean(value).replace(/\./g, "/").replace(/-/g, "/");
+    let match = text.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+    if (match) return `${match[1]}-${String(Number(match[2])).padStart(2, "0")}-${String(Number(match[3])).padStart(2, "0")}`;
+    match = text.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (match) return `${String(Number(match[1])).padStart(2, "0")}-${String(Number(match[2])).padStart(2, "0")}`;
+    return value;
   }
 
   function clean(value) {
@@ -332,6 +365,8 @@ window.SstcCRM = (() => {
     downloadText,
     birthdayMonth,
     birthdayDay,
+    birthdayYear,
+    ageFromBirthday,
     formatBirthday,
     clean,
     toNumber,
