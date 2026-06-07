@@ -88,6 +88,7 @@ const els = {
   matrixCount: document.querySelector("#matrixCount"),
   actionLists: document.querySelector("#actionLists"),
   actionListCount: document.querySelector("#actionListCount"),
+  clearFiltersBtn: document.querySelector("#clearFiltersBtn"),
   exportCsvBtn: document.querySelector("#exportCsvBtn"),
 };
 
@@ -103,6 +104,7 @@ els.contactFilter.addEventListener("change", renderFiltered);
 els.rankFilter.addEventListener("change", renderFiltered);
 els.searchInput.addEventListener("input", renderFiltered);
 els.exportCsvBtn.addEventListener("click", exportCurrentCsv);
+if (els.clearFiltersBtn) els.clearFiltersBtn.addEventListener("click", resetFilters);
 
 seedMonthFilter();
 seedStaticFilters();
@@ -134,6 +136,7 @@ function finishPackageLoad() {
 function populateStoreSelect() {
   portalState.visibleStores = [...portalState.package.stores]
     .filter((store) => isCustomerFacingStore(store))
+    .map(enrichStoreMeta)
     .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
   renderStoreOptions();
   els.storeSearchInput.disabled = false;
@@ -168,6 +171,19 @@ function isCustomerFacingStore(store) {
   return !store.hidden;
 }
 
+function enrichStoreMeta(store) {
+  const rule = findPasswordRule(store.name);
+  const rawStoreCode = rule?.storeCode || store.storeCode || store.code || "";
+  const storeCode = isEmployeeCode(rawStoreCode) ? "" : rawStoreCode;
+  const employeeCode = store.employeeCode || rule?.employeeCode || (isEmployeeCode(rawStoreCode) ? rawStoreCode : "");
+  return {
+    ...store,
+    code: storeCode,
+    storeCode,
+    employeeCode,
+  };
+}
+
 function storeLabel(store) {
   const code = store.storeCode || store.code || "";
   const codeText = code ? `${code}｜` : "";
@@ -176,6 +192,38 @@ function storeLabel(store) {
 
 function normalizeSearchText(value) {
   return String(value || "").toLowerCase().replace(/\s+/g, "");
+}
+
+function findPasswordRule(storeName) {
+  const rules = window.SSTC_STORE_PASSWORD_RULES || [];
+  const strictStore = normalizeStoreName(storeName, true);
+  const strictMatch = rules.find((rule) => {
+    const strictRule = normalizeStoreName(rule.shortName, true);
+    return strictStore.includes(strictRule) || strictRule.includes(strictStore);
+  });
+  if (strictMatch) return strictMatch;
+
+  const looseStore = normalizeStoreName(storeName, false);
+  return rules.find((rule) => {
+    const looseRule = normalizeStoreName(rule.shortName, false);
+    return looseStore.includes(looseRule) || looseRule.includes(looseStore);
+  });
+}
+
+function normalizeStoreName(value, keepArea) {
+  let text = String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/lalaport/g, "laport")
+    .replace(/[()（）／/\\-]/g, "")
+    .replace(/門市|專櫃|outlet|店|正櫃|男女裝|男裝|女裝|混合/g, "")
+    .replace(/a1館|a館|sogo|park/g, "");
+  if (!keepArea) text = text.replace(/台北|台中|台南|高雄|桃園|新竹|南港|林口/g, "");
+  return text;
+}
+
+function isEmployeeCode(value) {
+  return /^T\d{3}(?:\/T\d{3})*$/i.test(String(value || "").trim());
 }
 
 async function handleLogin(event) {
@@ -298,6 +346,13 @@ function renderDashboard() {
 
   seedLevelFilter(rows);
   seedAreaFilter(rows);
+  resetFilters(false);
+  drawCharts(rows);
+  renderFiltered();
+}
+
+function resetFilters(shouldRender = true) {
+  els.levelFilter.value = "all";
   els.monthFilter.value = "all";
   els.salesRangeFilter.value = "all";
   els.orderRangeFilter.value = "all";
@@ -305,8 +360,7 @@ function renderDashboard() {
   els.contactFilter.value = "all";
   els.rankFilter.value = "birthday";
   els.searchInput.value = "";
-  drawCharts(rows);
-  renderFiltered();
+  if (shouldRender) renderFiltered();
 }
 
 function seedLevelFilter(rows) {

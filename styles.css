@@ -321,8 +321,13 @@ button:disabled {
 }
 
 #logoutBtn,
-#exportCsvBtn {
+#exportCsvBtn,
+#clearFiltersBtn {
   background: #6d6870;
+}
+
+#clearFiltersBtn {
+  background: #9b8f96;
 }
 
 .metric-grid {

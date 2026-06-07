@@ -263,20 +263,25 @@ async function loadPasswordsOnOpen() {
 function hydrateStoresFromCurrentPackage() {
   if (adminState.stores.length || !window.SSTC_ENCRYPTED_DATA?.stores?.length) return;
   adminState.stores = window.SSTC_ENCRYPTED_DATA.stores
-    .map((store) => ({
-      id: store.id,
-      name: store.name,
-      code: store.storeCode || store.code || "",
-      storeCode: store.storeCode || store.code || "",
-      employeeCode: store.employeeCode || "",
-      phone: "",
-      count: store.count || 0,
-      members: null,
-      password: "",
-      dataKey: "",
-      hidden: Boolean(store.hidden),
-      passwordSource: "目前資料包",
-    }))
+    .map((store) => {
+      const rule = findPasswordRule(store.name);
+      const rawStoreCode = rule?.storeCode || store.storeCode || store.code || "";
+      const storeCode = isEmployeeCode(rawStoreCode) ? "" : rawStoreCode;
+      return {
+        id: store.id,
+        name: store.name,
+        code: storeCode,
+        storeCode,
+        employeeCode: store.employeeCode || rule?.employeeCode || (isEmployeeCode(rawStoreCode) ? rawStoreCode : ""),
+        phone: "",
+        count: store.count || 0,
+        members: null,
+        password: "",
+        dataKey: "",
+        hidden: Boolean(store.hidden),
+        passwordSource: "目前資料包",
+      };
+    })
     .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
   adminEls.adminPanel.classList.remove("hidden");
   adminEls.storeCountText.textContent = `${SstcCRM.formatNumber(adminState.stores.length)} 家`;
@@ -290,9 +295,11 @@ function applySheetPasswordsToStores() {
     if (sheetRow?.password) {
       store.password = sheetRow.password;
       store.dataKey = sheetRow.dataKey || store.dataKey || makeDataKey(store.name);
-      store.storeCode = sheetRow.storeCode || sheetRow.code || store.storeCode || store.code || "";
+      const sheetCode = sheetRow.storeCode || sheetRow.code || "";
+      const cleanSheetStoreCode = isEmployeeCode(sheetCode) ? "" : sheetCode;
+      store.storeCode = cleanSheetStoreCode || store.storeCode || store.code || "";
       store.code = store.storeCode;
-      store.employeeCode = sheetRow.employeeCode || store.employeeCode || "";
+      store.employeeCode = sheetRow.employeeCode || (isEmployeeCode(sheetCode) ? sheetCode : "") || store.employeeCode || "";
       store.phone = store.phone || sheetRow.phone || "";
       if (sheetRow.hasHiddenSetting) store.hidden = Boolean(sheetRow.hidden);
       store.passwordSource = "Google Sheet";
@@ -464,8 +471,8 @@ async function buildLatestPackageWithoutDownload() {
       if (!store) return entry;
       return {
         ...entry,
-        code: store.storeCode || store.code || entry.code || "",
-        storeCode: store.storeCode || store.code || entry.storeCode || entry.code || "",
+        code: store.storeCode || store.code || "",
+        storeCode: store.storeCode || store.code || "",
         employeeCode: store.employeeCode || entry.employeeCode || "",
         hidden: Boolean(store.hidden),
       };
@@ -573,4 +580,8 @@ function makeDefaultPassword(rule) {
   const prefix = rule.storeCode || String(rule.employeeCode || rule.code || "").split("/")[0];
   const phoneTail = String(rule.phone || "").replace(/\D/g, "").slice(-5);
   return prefix && phoneTail ? `${prefix}${phoneTail}` : SstcCRM.randomPassword();
+}
+
+function isEmployeeCode(value) {
+  return /^T\d{3}(?:\/T\d{3})*$/i.test(String(value || "").trim());
 }
