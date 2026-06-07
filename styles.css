@@ -165,7 +165,8 @@ select {
 .metric-grid,
 .visual-grid,
 .filter-strip,
-.admin-actions {
+.admin-actions,
+.github-grid {
   display: grid;
   gap: 14px;
 }
@@ -221,9 +222,21 @@ input[type="file"] {
   grid-auto-columns: max-content;
 }
 
+.github-panel {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 18px;
+}
+
+.github-grid {
+  grid-template-columns: minmax(240px, 1.2fr) minmax(220px, 0.8fr) minmax(120px, 0.4fr) auto;
+  align-items: end;
+}
+
 select,
 input[type="password"],
 input[type="search"],
+input[type="text"],
 .password-cell {
   width: 100%;
   border: 1px solid var(--line);
@@ -419,7 +432,8 @@ td.orders {
   .metric-grid,
   .visual-grid,
   .filter-strip,
-  .admin-actions {
+  .admin-actions,
+  .github-grid {
     grid-template-columns: 1fr;
     grid-auto-flow: row;
   }
