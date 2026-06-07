@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SST&C 生日會員經營系統</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <p class="eyebrow">SST&C Clienteling</p>
+      <h1>生日會員經營系統</h1>
+    </div>
+    <div class="status-pill" id="dataStatus">讀取資料中</div>
+  </header>
+
+  <main class="shell">
+    <section class="login-panel" aria-label="門市登入">
+      <div class="section-title">
+        <h2>門市登入</h2>
+        <p>請選擇自己的門市並輸入密碼。每家門市只能解開自己的會員資料。</p>
+      </div>
+      <form id="loginForm" class="login-form">
+        <label>
+          <span>門市</span>
+          <select id="storeSelect" disabled>
+            <option value="">尚未載入門市資料</option>
+          </select>
+        </label>
+        <label>
+          <span>密碼</span>
+          <input id="passwordInput" type="password" autocomplete="current-password" placeholder="請輸入門市密碼" disabled>
+        </label>
+        <button type="submit" id="loginBtn" disabled>進入</button>
+      </form>
+      <div class="notice compact" id="loadNotice">
+        若這裡一直顯示尚未載入，請確認 `data/encrypted-data.js` 或 `data/encrypted-data.json` 已放入資料夾。
+      </div>
+    </section>
+
+    <section id="dashboard" class="dashboard hidden" aria-live="polite">
+      <div class="dashboard-head">
+        <div>
+          <p class="eyebrow" id="currentStoreCode">Store</p>
+          <h2 id="currentStoreName">門市資料</h2>
+        </div>
+        <button id="logoutBtn" type="button">切換門市</button>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <span>會員數</span>
+          <strong id="metricMembers">0</strong>
+        </div>
+        <div class="metric">
+          <span>本月生日</span>
+          <strong id="metricThisMonth">0</strong>
+        </div>
+        <div class="metric">
+          <span>總消費</span>
+          <strong id="metricSales">$0</strong>
+        </div>
+        <div class="metric">
+          <span>平均客單</span>
+          <strong id="metricAvg">$0</strong>
+        </div>
+      </div>
+
+      <div class="visual-grid">
+        <section class="chart-panel">
+          <h3>生日月份分布</h3>
+          <canvas id="monthChart" width="900" height="320"></canvas>
+        </section>
+        <section class="chart-panel">
+          <h3>卡別人數</h3>
+          <canvas id="levelChart" width="900" height="320"></canvas>
+        </section>
+      </div>
+
+      <section class="filter-strip" aria-label="查詢條件">
+        <label>
+          <span>卡別</span>
+          <select id="levelFilter"></select>
+        </label>
+        <label>
+          <span>生日月份</span>
+          <select id="monthFilter"></select>
+        </label>
+        <label class="search-box">
+          <span>搜尋</span>
+          <input id="searchInput" type="search" placeholder="姓名、手機、Email、會員編號">
+        </label>
+        <button id="exportCsvBtn" type="button">匯出目前名單</button>
+      </section>
+
+      <section class="birthday-board">
+        <div class="board-head">
+          <h3 id="resultTitle">生日名單</h3>
+          <span id="resultCount">0 筆</span>
+        </div>
+        <div id="monthGroups" class="month-groups"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="data/encrypted-data.js"></script>
+  <script src="portal.js"></script>
+</body>
+</html>

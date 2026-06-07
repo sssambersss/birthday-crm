@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SST&C 生日會員經營系統｜管理端</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <p class="eyebrow">SST&C Admin</p>
+      <h1>資料更新管理端</h1>
+    </div>
+    <div class="status-pill" id="dataStatus">尚未匯入資料</div>
+  </header>
+
+  <main class="shell">
+    <section class="import-band" aria-label="資料匯入">
+      <div class="section-title">
+        <h2>更新原始名單</h2>
+        <p>選取 91APP 匯出的會員 CSV，可一次選多份；系統會依「加入門市名稱」分店，並產生加密資料包。</p>
+      </div>
+      <div class="import-grid">
+        <label class="file-tile">
+          <span>會員 CSV</span>
+          <input id="memberFiles" type="file" accept=".csv" multiple>
+        </label>
+      </div>
+      <div class="notice">
+        產生後請把 `encrypted-data.js` 放進 GitHub 專案的 `data` 資料夾。密碼清單請另外保存，不要上傳到 GitHub。
+      </div>
+    </section>
+
+    <section id="adminPanel" class="dashboard hidden">
+      <div class="dashboard-head">
+        <div>
+          <p class="eyebrow">Encrypted Data Builder</p>
+          <h2>門市密碼與加密資料包</h2>
+        </div>
+        <div class="admin-actions">
+          <button id="downloadPasswordsBtn" type="button">下載密碼清單</button>
+          <button id="generateBtn" type="button">產生加密資料檔</button>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <span>會員數</span>
+          <strong id="metricMembers">0</strong>
+        </div>
+        <div class="metric">
+          <span>門市數</span>
+          <strong id="metricStores">0</strong>
+        </div>
+        <div class="metric">
+          <span>有生日</span>
+          <strong id="metricBirthdays">0</strong>
+        </div>
+        <div class="metric">
+          <span>未歸屬門市</span>
+          <strong id="metricNoStore">0</strong>
+        </div>
+      </div>
+
+      <section class="birthday-board">
+        <div class="board-head">
+          <h3>門市密碼</h3>
+          <span id="storeCountText">0 家</span>
+        </div>
+        <div class="table-wrap">
+          <table class="password-table">
+            <thead>
+              <tr>
+                <th>門市</th>
+                <th>代號</th>
+                <th>會員數</th>
+                <th>門市密碼</th>
+                <th>來源</th>
+              </tr>
+            </thead>
+            <tbody id="passwordRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="shared.js"></script>
+  <script src="store-password-rules.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
