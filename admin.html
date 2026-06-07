@@ -68,6 +68,14 @@
           <h3>門市密碼</h3>
           <span id="storeCountText">0 家</span>
         </div>
+        <div class="sheet-sync">
+          <label>
+            <span>Google Sheet 密碼表連結</span>
+            <input id="sheetUrl" type="text" value="https://docs.google.com/spreadsheets/d/1pmvL0Z6W0u-L71JTsgGQMdbQDwW9MhSveD6CeOSqs28/edit?usp=sharing">
+          </label>
+          <button id="syncSheetBtn" type="button">同步密碼</button>
+          <span id="sheetStatus">尚未同步</span>
+        </div>
         <div class="table-wrap">
           <table class="password-table">
             <thead>

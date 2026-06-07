@@ -21,12 +21,16 @@ const adminEls = {
   githubBranch: document.querySelector("#githubBranch"),
   uploadGithubBtn: document.querySelector("#uploadGithubBtn"),
   githubStatus: document.querySelector("#githubStatus"),
+  sheetUrl: document.querySelector("#sheetUrl"),
+  syncSheetBtn: document.querySelector("#syncSheetBtn"),
+  sheetStatus: document.querySelector("#sheetStatus"),
 };
 
 adminEls.memberFiles.addEventListener("change", handleMemberFiles);
 adminEls.generateBtn.addEventListener("click", generateEncryptedData);
 adminEls.downloadPasswordsBtn.addEventListener("click", downloadPasswordList);
 adminEls.uploadGithubBtn.addEventListener("click", uploadEncryptedDataToGitHub);
+adminEls.syncSheetBtn.addEventListener("click", syncPasswordsFromGoogleSheet);
 
 async function handleMemberFiles(event) {
   const files = [...event.target.files].filter((file) => file.name.toLowerCase().endsWith(".csv"));
@@ -82,6 +86,7 @@ function renderAdminPanel() {
     </tr>
   `).join("");
   adminEls.adminPanel.classList.remove("hidden");
+  if (adminEls.sheetUrl.value.trim()) syncPasswordsFromGoogleSheet({ silent: true });
 }
 
 async function generateEncryptedData() {
@@ -138,6 +143,142 @@ function syncPasswordsFromTable() {
     const store = adminState.stores.find((item) => item.id === input.dataset.storeId);
     if (store) store.password = input.value.trim() || store.password;
   });
+}
+
+async function syncPasswordsFromGoogleSheet(options = {}) {
+  if (!adminState.stores.length) {
+    if (!options.silent) alert("請先上傳會員 CSV，讓系統產生門市表格。");
+    return;
+  }
+  const url = adminEls.sheetUrl.value.trim();
+  if (!url) {
+    if (!options.silent) alert("請貼上 Google Sheet 連結。");
+    return;
+  }
+
+  adminEls.syncSheetBtn.disabled = true;
+  adminEls.sheetStatus.textContent = "同步中...";
+  try {
+    const rows = await loadGoogleSheetRows(url);
+    const passwordMap = buildSheetPasswordMap(rows);
+    let matched = 0;
+    for (const store of adminState.stores) {
+      const sheetRow = findSheetPasswordRow(store.name, passwordMap);
+      if (sheetRow?.password) {
+        store.password = sheetRow.password;
+        store.code = store.code || sheetRow.code || "";
+        store.phone = store.phone || sheetRow.phone || "";
+        store.passwordSource = "Google Sheet";
+        matched += 1;
+      }
+    }
+    adminState.latestPackageText = "";
+    renderPasswordRowsOnly();
+    adminEls.sheetStatus.textContent = `已同步 ${matched} 家`;
+  } catch (error) {
+    adminEls.sheetStatus.textContent = "同步失敗";
+    if (!options.silent) alert(error.message);
+  } finally {
+    adminEls.syncSheetBtn.disabled = false;
+  }
+}
+
+function renderPasswordRowsOnly() {
+  adminEls.passwordRows.innerHTML = adminState.stores.map((store) => `
+    <tr>
+      <td>${SstcCRM.escapeHtml(store.name)}</td>
+      <td>${SstcCRM.escapeHtml(store.code || "-")}</td>
+      <td class="orders">${SstcCRM.formatNumber(store.count)}</td>
+      <td>
+        <input class="password-cell" data-store-id="${SstcCRM.escapeHtml(store.id)}" type="text" value="${SstcCRM.escapeHtml(store.password)}">
+      </td>
+      <td>${SstcCRM.escapeHtml(store.passwordSource)}</td>
+    </tr>
+  `).join("");
+}
+
+function loadGoogleSheetRows(url) {
+  const sheetId = extractSheetId(url);
+  if (!sheetId) throw new Error("無法辨識 Google Sheet 連結。");
+  const callback = `sstcSheetCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const src = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=responseHandler:${callback};out:json`;
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error("Google Sheet 讀取逾時。請確認分享權限允許讀取。"));
+    }, 15000);
+
+    window[callback] = (payload) => {
+      cleanup();
+      try {
+        resolve(gvizToRows(payload));
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("無法讀取 Google Sheet。請確認連結與分享權限。"));
+    };
+    script.src = src;
+    document.body.appendChild(script);
+
+    function cleanup() {
+      clearTimeout(timer);
+      delete window[callback];
+      script.remove();
+    }
+  });
+}
+
+function gvizToRows(payload) {
+  const table = payload?.table;
+  if (!table?.cols?.length || !table?.rows?.length) throw new Error("Google Sheet 沒有可讀取的表格資料。");
+  const headers = table.cols.map((col, index) => SstcCRM.clean(col.label || col.id || `欄位${index + 1}`));
+  return table.rows.map((row) => {
+    const item = {};
+    row.c?.forEach((cell, index) => {
+      item[headers[index]] = SstcCRM.clean(cell?.f ?? cell?.v ?? "");
+    });
+    return item;
+  });
+}
+
+function buildSheetPasswordMap(rows) {
+  return rows
+    .map((row) => ({
+      name: pickField(row, ["門市", "門市名稱", "店名", "店家"]),
+      code: pickField(row, ["店櫃代號", "代號"]),
+      phone: pickField(row, ["電話", "店櫃電話", "手機"]),
+      password: pickField(row, ["密碼", "門市密碼", "password"]),
+    }))
+    .filter((row) => row.name && row.password);
+}
+
+function findSheetPasswordRow(storeName, rows) {
+  const strictStore = normalizeStoreName(storeName, true);
+  return rows.find((row) => {
+    const strictName = normalizeStoreName(row.name, true);
+    return strictStore.includes(strictName) || strictName.includes(strictStore);
+  }) || rows.find((row) => {
+    const looseStore = normalizeStoreName(storeName, false);
+    const looseName = normalizeStoreName(row.name, false);
+    return looseStore.includes(looseName) || looseName.includes(looseStore);
+  });
+}
+
+function pickField(row, names) {
+  for (const name of names) {
+    if (row[name]) return SstcCRM.clean(row[name]);
+  }
+  return "";
+}
+
+function extractSheetId(url) {
+  return String(url).match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/)?.[1] || "";
 }
 
 function setStatus(text) {

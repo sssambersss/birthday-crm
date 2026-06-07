@@ -166,7 +166,8 @@ select {
 .visual-grid,
 .filter-strip,
 .admin-actions,
-.github-grid {
+.github-grid,
+.sheet-sync {
   display: grid;
   gap: 14px;
 }
@@ -231,6 +232,29 @@ input[type="file"] {
 .github-grid {
   grid-template-columns: minmax(240px, 1.2fr) minmax(220px, 0.8fr) minmax(120px, 0.4fr) auto;
   align-items: end;
+}
+
+.sheet-sync {
+  grid-template-columns: minmax(260px, 1fr) auto auto;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 250, 250, 0.78);
+  margin-bottom: 14px;
+  padding: 14px;
+}
+
+.sheet-sync label,
+.github-grid label {
+  display: grid;
+  gap: 8px;
+}
+
+.sheet-sync span,
+.github-grid span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 select,
@@ -433,7 +457,8 @@ td.orders {
   .visual-grid,
   .filter-strip,
   .admin-actions,
-  .github-grid {
+  .github-grid,
+  .sheet-sync {
     grid-template-columns: 1fr;
     grid-auto-flow: row;
   }
