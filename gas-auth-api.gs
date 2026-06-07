@@ -40,8 +40,7 @@ function authenticate_(storeName, storeId, password) {
     return { ok: false, error: "invalid_password" };
   }
 
-  const dataKey = pick_(match, ["資料鑰匙", "資料金鑰", "解密鑰匙", "dataKey", "key"]);
-  if (!dataKey) return { ok: false, error: "missing_data_key" };
+  const dataKey = pick_(match, ["資料鑰匙", "資料金鑰", "解密鑰匙", "dataKey", "key"]) || sheetPassword;
 
   return {
     ok: true,

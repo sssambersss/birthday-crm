@@ -83,12 +83,19 @@ async function handleLogin(event) {
   els.loginBtn.textContent = "登入中";
   try {
     const dataKey = await resolveLoginKey(selected, password);
-    const decrypted = await SstcCRM.decryptJson(selected, dataKey);
+    let decrypted;
+    try {
+      decrypted = await SstcCRM.decryptJson(selected, dataKey);
+    } catch {
+      throw new Error("decrypt_failed");
+    }
     portalState.currentStore = selected;
     portalState.currentRows = decrypted.members || [];
     renderDashboard();
-  } catch {
-    alert("密碼錯誤，或這不是該門市的密碼。");
+  } catch (error) {
+    alert(error.message === "decrypt_failed"
+      ? "密碼驗證成功，但資料包還不是用目前鑰匙產生。請到後台重新產生加密資料並更新 GitHub。"
+      : "密碼錯誤，或這不是該門市的密碼。");
   } finally {
     els.loginBtn.disabled = false;
     els.loginBtn.textContent = "進入";
@@ -104,7 +111,7 @@ async function resolveLoginKey(store, password) {
     password,
   });
   if (!result?.ok || !result.dataKey) {
-    throw new Error("invalid_password");
+    throw new Error(result?.error || "invalid_password");
   }
   return result.dataKey;
 }
