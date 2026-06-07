@@ -73,8 +73,7 @@ select {
   padding-top: 8px;
 }
 
-.brand-lockup::before {
-  content: "SST&C";
+.brand-plaque {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -86,6 +85,12 @@ select {
   font-size: 12px;
   letter-spacing: 0.18em;
   margin-bottom: 12px;
+  text-decoration: none;
+}
+
+.brand-plaque:hover {
+  border-color: var(--brand);
+  color: var(--brand-strong);
 }
 
 .topbar h1,
