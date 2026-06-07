@@ -184,17 +184,17 @@ window.SstcCRM = (() => {
     const age = row.age || ageFromBirthday(row.birthday) || "";
     return `
       <tr>
-        <td>${escapeHtml(formatBirthday(row.birthday))}</td>
-        <td class="orders">${escapeHtml(age || "-")}</td>
-        <td><span class="level-badge">${escapeHtml(row.level)}</span></td>
-        <td>${escapeHtml(row.name)}<br><small>${escapeHtml(row.brandId || row.onlineId)}</small></td>
-        <td>${escapeHtml(row.phone)}</td>
-        <td>${escapeHtml(row.email)}</td>
-        <td class="money">${money(row.sales)}</td>
-        <td class="orders">${formatNumber(row.orders)}</td>
-        <td class="orders">${formatNumber(row.points)}</td>
-        <td>${escapeHtml(area)}</td>
-        <td>${escapeHtml(row.note)}</td>
+        <td data-label="生日">${escapeHtml(formatBirthday(row.birthday))}</td>
+        <td data-label="年齡" class="orders">${escapeHtml(age || "-")}</td>
+        <td data-label="卡別"><span class="level-badge">${escapeHtml(row.level)}</span></td>
+        <td data-label="姓名">${escapeHtml(row.name)}<br><small>${escapeHtml(row.brandId || row.onlineId)}</small></td>
+        <td data-label="手機">${escapeHtml(row.phone)}</td>
+        <td data-label="Email">${escapeHtml(row.email)}</td>
+        <td data-label="消費" class="money">${money(row.sales)}</td>
+        <td data-label="訂單" class="orders">${formatNumber(row.orders)}</td>
+        <td data-label="點數" class="orders">${formatNumber(row.points)}</td>
+        <td data-label="地區">${escapeHtml(area)}</td>
+        <td data-label="註記">${escapeHtml(row.note)}</td>
       </tr>
     `;
   }

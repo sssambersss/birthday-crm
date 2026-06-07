@@ -483,12 +483,33 @@ td.orders {
   font-size: 13px;
 }
 
+.insight-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: #f4e1e3;
+  color: #8f5f66;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .matrix-wrap {
   overflow-x: auto;
 }
 
 .matrix-table {
-  min-width: 680px;
+  min-width: 560px;
 }
 
 .matrix-table th,
@@ -578,5 +599,53 @@ td.orders {
   th,
   td {
     padding: 9px 10px;
+  }
+}
+
+@media (max-width: 720px) {
+  .birthday-board table {
+    min-width: 0;
+  }
+
+  .birthday-board thead {
+    display: none;
+  }
+
+  .birthday-board tbody,
+  .birthday-board tr,
+  .birthday-board td {
+    display: block;
+    width: 100%;
+  }
+
+  .birthday-board tr {
+    border-top: 1px solid var(--line);
+    padding: 10px 0;
+  }
+
+  .birthday-board td {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px;
+    border-top: 0;
+    padding: 6px 12px;
+    text-align: left;
+    min-height: 0;
+  }
+
+  .birthday-board td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .birthday-board td.money,
+  .birthday-board td.orders {
+    text-align: left;
+  }
+
+  .matrix-table {
+    min-width: 520px;
   }
 }

@@ -256,6 +256,9 @@ async function handleLogin(event) {
       store_not_found: "這個門市不在 Google Sheet 密碼表裡，請先確認密碼表是否有這家店。",
       missing_data_key: "Google Sheet 缺少資料鑰匙欄，請重新下載後台產生的密碼清單並補到 Sheet。",
       invalid_password: "密碼錯誤，或這不是該門市的密碼。",
+      sheet_access_failed: "密碼表讀取失敗。請確認 Google Apps Script 部署為「以擁有者身分執行」且「任何人」可存取。",
+      auth_failed: "密碼驗證服務無法讀取。請確認 Google Apps Script 部署權限。",
+      auth_timeout: "密碼驗證逾時。請重新整理後再試，或確認 Google Apps Script 部署權限。",
     };
     alert(messages[error.message] || "密碼錯誤，或這不是該門市的密碼。");
   } finally {
@@ -472,34 +475,35 @@ function renderInsights(rows) {
 function renderTopCustomers(rows) {
   const topRows = [...rows].sort((a, b) => b.sales - a.sales || b.orders - a.orders).slice(0, 10);
   els.topCustomerCount.textContent = `${SstcCRM.formatNumber(topRows.length)} 筆`;
-  els.topCustomers.innerHTML = topRows.length ? topRows.map((row, index) => `
+  els.topCustomers.innerHTML = `<p class="insight-note">依目前篩選條件，列出累積消費最高的前 10 位。</p>` + (topRows.length ? topRows.map((row, index) => `
     <div class="mini-row">
-      <strong>${index + 1}. ${SstcCRM.escapeHtml(row.name)}</strong>
+      <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(row.name)}</strong>
       <span>${SstcCRM.escapeHtml(row.level)}｜${SstcCRM.money(row.sales)}｜${SstcCRM.formatNumber(row.orders)} 單</span>
     </div>
-  `).join("") : `<div class="empty compact-empty">目前沒有符合條件的高價值客人。</div>`;
+  `).join("") : `<div class="empty compact-empty">目前沒有符合條件的高價值客人。</div>`);
 }
 
 function renderAreaSummary(rows) {
   const areas = countBy(rows, areaName).filter((item) => item.label);
   els.areaSummaryCount.textContent = `${SstcCRM.formatNumber(areas.length)} 區`;
-  els.areaSummary.innerHTML = areas.slice(0, 10).map((item) => `
+  els.areaSummary.innerHTML = `<p class="insight-note">依會員縣市與行政區統計，排序以人數優先、消費金額次之。</p>` + (areas.slice(0, 10).map((item, index) => `
     <div class="mini-row">
-      <strong>${SstcCRM.escapeHtml(item.label)}</strong>
+      <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(item.label)}</strong>
       <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
     </div>
-  `).join("") || `<div class="empty compact-empty">目前沒有地區資料。</div>`;
+  `).join("") || `<div class="empty compact-empty">目前沒有地區資料。</div>`);
 }
 
 function renderSegmentMatrix(rows) {
   const levels = [...new Set(rows.map((row) => row.level))].sort(SstcCRM.levelSorter);
-  const ranges = salesRanges.filter((range) => range.id !== "all");
+  const ranges = salesRanges.filter((range) => range.id !== "all" && range.id !== "0");
   els.matrixCount.textContent = `${SstcCRM.formatNumber(rows.length)} 筆`;
   if (!rows.length) {
     els.segmentMatrix.innerHTML = `<div class="empty compact-empty">目前沒有符合條件的資料。</div>`;
     return;
   }
   els.segmentMatrix.innerHTML = `
+    <p class="insight-note">交叉比對卡別與累積消費級距，用來看不同卡別的消費分布。</p>
     <table class="matrix-table">
       <thead>
         <tr>
@@ -543,15 +547,15 @@ function renderActionLists(rows) {
   ].filter((group) => group.rows.length);
 
   els.actionListCount.textContent = `${SstcCRM.formatNumber(groups.length)} 組`;
-  els.actionLists.innerHTML = groups.length ? groups.map((group) => {
+  els.actionLists.innerHTML = `<p class="insight-note">系統依生日月份、消費與點數抓出可優先聯繫的客戶群。</p>` + (groups.length ? groups.map((group, index) => {
     const top = group.rows.slice(0, 5);
     return `
       <div class="mini-group">
-        <strong>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.rows.length)} 人</strong>
+        <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.rows.length)} 人</strong>
         ${top.map((row) => `<span>${SstcCRM.escapeHtml(row.name)}｜${SstcCRM.money(row.sales)}｜${SstcCRM.formatBirthday(row.birthday)}</span>`).join("")}
       </div>
     `;
-  }).join("") : `<div class="empty compact-empty">目前沒有可優先經營名單。</div>`;
+  }).join("") : `<div class="empty compact-empty">目前沒有可優先經營名單。</div>`);
 }
 
 function drawCharts(rows) {

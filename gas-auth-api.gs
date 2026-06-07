@@ -3,7 +3,16 @@ const SHEET_NAME = "";
 
 function doGet(e) {
   const callback = (e.parameter.callback || "").replace(/[^\w.$]/g, "");
-  const result = authenticate_(e.parameter.store || "", e.parameter.storeId || "", e.parameter.password || "");
+  let result;
+  try {
+    result = authenticate_(e.parameter.store || "", e.parameter.storeId || "", e.parameter.password || "");
+  } catch (error) {
+    result = {
+      ok: false,
+      error: "sheet_access_failed",
+      message: String(error && error.message ? error.message : error),
+    };
+  }
   const body = callback
     ? `${callback}(${JSON.stringify(result)});`
     : JSON.stringify(result);
