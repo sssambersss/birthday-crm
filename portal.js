@@ -64,13 +64,22 @@ function finishPackageLoad() {
 }
 
 function populateStoreSelect() {
-  const stores = [...portalState.package.stores].sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
+  const stores = [...portalState.package.stores]
+    .filter((store) => isCustomerFacingStore(store))
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-Hant"));
   els.storeSelect.innerHTML = stores.map((store) => (
     `<option value="${SstcCRM.escapeHtml(store.id)}">${SstcCRM.escapeHtml(store.name)} (${SstcCRM.formatNumber(store.count)})</option>`
   )).join("");
   els.storeSelect.disabled = false;
   els.passwordInput.disabled = false;
   els.loginBtn.disabled = false;
+}
+
+function isCustomerFacingStore(store) {
+  const name = String(store.name || "");
+  if (!name || name === "未歸屬門市") return false;
+  if (name.includes("總公司")) return false;
+  return true;
 }
 
 async function handleLogin(event) {
@@ -93,9 +102,13 @@ async function handleLogin(event) {
     portalState.currentRows = decrypted.members || [];
     renderDashboard();
   } catch (error) {
-    alert(error.message === "decrypt_failed"
-      ? "密碼驗證成功，但資料包還不是用目前鑰匙產生。請到後台重新產生加密資料並更新 GitHub。"
-      : "密碼錯誤，或這不是該門市的密碼。");
+    const messages = {
+      decrypt_failed: "密碼驗證成功，但資料包還不是用目前鑰匙產生。請到後台重新產生加密資料並更新 GitHub。",
+      store_not_found: "這個門市不在 Google Sheet 密碼表裡，請先確認密碼表是否有這家店。",
+      missing_data_key: "Google Sheet 缺少資料鑰匙欄，請重新下載後台產生的密碼清單並補到 Sheet。",
+      invalid_password: "密碼錯誤，或這不是該門市的密碼。",
+    };
+    alert(messages[error.message] || "密碼錯誤，或這不是該門市的密碼。");
   } finally {
     els.loginBtn.disabled = false;
     els.loginBtn.textContent = "進入";
