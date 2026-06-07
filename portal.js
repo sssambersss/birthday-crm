@@ -479,22 +479,24 @@ function renderSegmentMatrix(rows) {
   }
   els.segmentMatrix.innerHTML = `
     <p class="insight-note">交叉比對卡別與累積消費級距，用來看不同卡別的消費分布。</p>
-    <table class="matrix-table">
-      <thead>
-        <tr>
-          <th>卡別</th>
-          ${ranges.map((range) => `<th>${range.label}</th>`).join("")}
-        </tr>
-      </thead>
-      <tbody>
-        ${levels.map((level) => `
+    <div class="matrix-wrap">
+      <table class="matrix-table">
+        <thead>
           <tr>
-            <th>${SstcCRM.escapeHtml(level)}</th>
-            ${ranges.map((range) => `<td>${SstcCRM.formatNumber(rows.filter((row) => row.level === level && inRange(row.sales, range)).length)}</td>`).join("")}
+            <th>卡別</th>
+            ${ranges.map((range) => `<th>${range.label}</th>`).join("")}
           </tr>
-        `).join("")}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          ${levels.map((level) => `
+            <tr>
+              <th>${SstcCRM.escapeHtml(level)}</th>
+              ${ranges.map((range) => `<td>${SstcCRM.formatNumber(rows.filter((row) => row.level === level && inRange(row.sales, range)).length)}</td>`).join("")}
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -527,7 +529,13 @@ function renderActionLists(rows) {
     return `
       <div class="mini-group">
         <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.rows.length)} 人</strong>
-        ${top.map((row) => `<span>${SstcCRM.escapeHtml(row.name)}｜${SstcCRM.money(row.sales)}｜${SstcCRM.formatBirthday(row.birthday)}</span>`).join("")}
+        ${top.map((row, rowIndex) => `
+          <span class="mini-customer">
+            <b>${rowIndex + 1}</b>
+            <em>${SstcCRM.escapeHtml(row.name)}</em>
+            <small>${SstcCRM.money(row.sales)}｜${SstcCRM.formatBirthday(row.birthday)}</small>
+          </span>
+        `).join("")}
       </div>
     `;
   }).join("") : `<div class="empty compact-empty">目前沒有可優先經營名單。</div>`);

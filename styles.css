@@ -371,6 +371,7 @@ button:disabled {
   border-radius: 6px;
   padding: 16px;
   background: rgba(255, 255, 255, 0.72);
+  min-width: 0;
 }
 
 .insight-panel .board-head {
@@ -483,6 +484,44 @@ td.orders {
   font-size: 13px;
 }
 
+.mini-customer {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: start;
+  min-width: 0;
+}
+
+.mini-customer b {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #f7edef;
+  color: #9a6970;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.mini-customer em {
+  color: var(--ink);
+  font-style: normal;
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.mini-customer small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .insight-note {
   margin: 0 0 10px;
   color: var(--muted);
@@ -505,11 +544,16 @@ td.orders {
 }
 
 .matrix-wrap {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .matrix-table {
   min-width: 560px;
+  width: max-content;
 }
 
 .matrix-table th,
@@ -646,6 +690,12 @@ td.orders {
   }
 
   .matrix-table {
-    min-width: 520px;
+    min-width: 500px;
+  }
+
+  .matrix-table th,
+  .matrix-table td {
+    padding-inline: 10px;
+    white-space: nowrap;
   }
 }
