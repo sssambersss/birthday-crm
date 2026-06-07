@@ -268,6 +268,9 @@ async function handleLogin(event) {
 }
 
 async function resolveLoginKey(store, password) {
+  const localKey = await resolveLoginKeyFromPackage(store, password);
+  if (localKey) return localKey;
+
   const apiUrl = window.SSTC_CONFIG?.authApiUrl?.trim();
   if (!apiUrl) return password;
   const result = await authWithJsonp(apiUrl, {
@@ -279,6 +282,18 @@ async function resolveLoginKey(store, password) {
     throw new Error(result?.error || "invalid_password");
   }
   return result.dataKey;
+}
+
+async function resolveLoginKeyFromPackage(store, password) {
+  const authEntry = portalState.package?.auth?.find((entry) => entry.id === store.id || entry.name === store.name);
+  if (!authEntry) return "";
+  try {
+    const result = await SstcCRM.decryptJson(authEntry, password);
+    if (!result?.dataKey) throw new Error("missing_data_key");
+    return result.dataKey;
+  } catch {
+    throw new Error("invalid_password");
+  }
 }
 
 function authWithJsonp(apiUrl, params) {

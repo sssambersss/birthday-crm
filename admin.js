@@ -126,10 +126,11 @@ async function generateEncryptedData() {
     }
 
     const packageData = {
-      version: 1,
+      version: 2,
       generatedAt: new Date().toISOString(),
       storeCount: stores.length,
       memberCount: adminState.members.length,
+      auth: await buildAuthEntries(adminState.stores),
       stores,
     };
 
@@ -479,8 +480,10 @@ async function buildLatestPackageWithoutDownload() {
     });
     const packageData = {
       ...window.SSTC_ENCRYPTED_DATA,
+      version: 2,
       generatedAt: new Date().toISOString(),
       storeCount: stores.length,
+      auth: await buildAuthEntries(adminState.stores),
       stores,
     };
     adminState.latestPackageText = `window.SSTC_ENCRYPTED_DATA = ${JSON.stringify(packageData)};\n`;
@@ -502,13 +505,28 @@ async function buildLatestPackageWithoutDownload() {
     });
   }
   const packageData = {
-    version: 1,
+    version: 2,
     generatedAt: new Date().toISOString(),
     storeCount: stores.length,
     memberCount: adminState.members.length,
+    auth: await buildAuthEntries(adminState.stores),
     stores,
   };
   adminState.latestPackageText = `window.SSTC_ENCRYPTED_DATA = ${JSON.stringify(packageData)};\n`;
+}
+
+async function buildAuthEntries(stores) {
+  const auth = [];
+  for (const store of stores) {
+    if (!store.password || !store.dataKey) continue;
+    const encrypted = await SstcCRM.encryptJson({ dataKey: store.dataKey }, store.password);
+    auth.push({
+      id: store.id,
+      name: store.name,
+      ...encrypted,
+    });
+  }
+  return auth;
 }
 
 function githubHeaders(token) {
