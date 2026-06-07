@@ -46,7 +46,7 @@ try {
     exit 0
   }
 
-  & $git add data/encrypted-data.js admin.html admin.js index.html portal.js shared.js store-password-rules.js styles.css README.md .gitignore .nojekyll data/.gitkeep
+  & $git add data/encrypted-data.js index.html portal.js shared.js styles.css README.md .gitignore .nojekyll data/.gitkeep update-github.ps1 update-github.bat
   $staged = & $git diff --cached --name-only
   if (-not $staged) {
     Write-Host "沒有需要提交的變更。"

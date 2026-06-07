@@ -2,14 +2,19 @@
 
 這是 GitHub Pages 可用的正式版靜態網站架構。
 
-## 兩個入口
+## 公開網站入口
 
-- `admin.html`：總部/管理者使用，負責上傳會員 CSV，產生加密資料包
 - `index.html`：門市使用，負責登入並查詢自己的生日會員名單
 
 ## 更新資料流程
 
-1. 打開 `admin.html`
+後台請使用本機私密資料夾：
+
+```text
+C:\Users\ching\Documents\New project\birthday-crm-private\admin-local\admin.html
+```
+
+1. 打開本機後台 `admin.html`
 2. 上傳 91APP 匯出的會員 CSV，可一次選多份
 3. 系統會依 CSV 內的「加入門市名稱」自動分店
 4. 系統會依內建店櫃通訊錄規則，帶入「店櫃代號 + 店櫃電話後五碼」作為密碼
