@@ -259,6 +259,7 @@ async function handleLogin(event) {
       sheet_access_failed: "密碼表讀取失敗。請確認 Google Apps Script 部署為「以擁有者身分執行」且「任何人」可存取。",
       auth_failed: "密碼驗證服務無法讀取。請確認 Google Apps Script 部署權限。",
       auth_timeout: "密碼驗證逾時。請重新整理後再試，或確認 Google Apps Script 部署權限。",
+      package_auth_missing: "目前資料包尚未包含新版登入驗證。請到後台按「同步密碼」後，再按「直接更新 GitHub」。",
     };
     alert(messages[error.message] || "密碼錯誤，或這不是該門市的密碼。");
   } finally {
@@ -268,63 +269,22 @@ async function handleLogin(event) {
 }
 
 async function resolveLoginKey(store, password) {
-  const localKey = await resolveLoginKeyFromPackage(store, password);
-  if (localKey) return localKey;
-
-  const apiUrl = window.SSTC_CONFIG?.authApiUrl?.trim();
-  if (!apiUrl) return password;
-  const result = await authWithJsonp(apiUrl, {
-    store: store.name,
-    storeId: store.id,
-    password,
-  });
-  if (!result?.ok || !result.dataKey) {
-    throw new Error(result?.error || "invalid_password");
-  }
-  return result.dataKey;
+  return resolveLoginKeyFromPackage(store, password);
 }
 
 async function resolveLoginKeyFromPackage(store, password) {
-  const authEntry = portalState.package?.auth?.find((entry) => entry.id === store.id || entry.name === store.name);
-  if (!authEntry) return "";
+  const authList = portalState.package?.auth || [];
+  if (!authList.length) throw new Error("package_auth_missing");
+  const authEntry = authList.find((entry) => entry.id === store.id || entry.name === store.name);
+  if (!authEntry) throw new Error("package_auth_missing");
   try {
     const result = await SstcCRM.decryptJson(authEntry, password);
     if (!result?.dataKey) throw new Error("missing_data_key");
     return result.dataKey;
-  } catch {
+  } catch (error) {
+    if (error.message === "missing_data_key") throw error;
     throw new Error("invalid_password");
   }
-}
-
-function authWithJsonp(apiUrl, params) {
-  const callback = `sstcAuthCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const url = new URL(apiUrl);
-  Object.entries({ ...params, callback }).forEach(([key, value]) => url.searchParams.set(key, value));
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    const timer = setTimeout(() => {
-      cleanup();
-      reject(new Error("auth_timeout"));
-    }, 15000);
-
-    window[callback] = (payload) => {
-      cleanup();
-      resolve(payload);
-    };
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("auth_failed"));
-    };
-    script.src = url.toString();
-    document.body.appendChild(script);
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[callback];
-      script.remove();
-    }
-  });
 }
 
 function logout() {
