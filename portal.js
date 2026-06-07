@@ -78,7 +78,6 @@ function populateStoreSelect() {
 function isCustomerFacingStore(store) {
   const name = String(store.name || "");
   if (!name || name === "未歸屬門市") return false;
-  if (name.includes("總公司")) return false;
   return true;
 }
 
