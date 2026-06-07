@@ -32,8 +32,17 @@ adminEls.generateBtn.addEventListener("click", generateEncryptedData);
 adminEls.downloadPasswordsBtn.addEventListener("click", downloadPasswordList);
 adminEls.uploadGithubBtn.addEventListener("click", uploadEncryptedDataToGitHub);
 adminEls.syncSheetBtn.addEventListener("click", syncPasswordsFromGoogleSheet);
+adminEls.passwordRows.addEventListener("input", markPackageDirty);
+adminEls.passwordRows.addEventListener("change", markPackageDirty);
 
 loadPasswordsOnOpen();
+
+function markPackageDirty() {
+  adminState.latestPackageText = "";
+  if (adminEls.githubStatus.textContent === "已更新 GitHub") {
+    adminEls.githubStatus.textContent = "有調整，尚未更新 GitHub";
+  }
+}
 
 async function handleMemberFiles(event) {
   const files = [...event.target.files].filter((file) => file.name.toLowerCase().endsWith(".csv"));
@@ -395,9 +404,7 @@ function setStatus(text) {
 
 async function uploadEncryptedDataToGitHub() {
   await ensureLatestSheetPasswords();
-  if (!adminState.latestPackageText) {
-    await buildLatestPackageWithoutDownload();
-  }
+  await buildLatestPackageWithoutDownload();
 
   const token = adminEls.githubToken.value.trim();
   const repo = adminEls.githubRepo.value.trim();
