@@ -116,8 +116,8 @@ async function generateEncryptedData() {
       stores.push({
         id: store.id,
         name: store.name,
-        code: store.storeCode || store.code || "",
-        storeCode: store.storeCode || store.code || "",
+        code: cleanStoreCode(store.storeCode || store.code || ""),
+        storeCode: cleanStoreCode(store.storeCode || store.code || ""),
         employeeCode: store.employeeCode || "",
         count: store.count,
         hidden: Boolean(store.hidden),
@@ -151,8 +151,8 @@ function downloadPasswordList() {
   if (!adminState.stores.length && !adminState.sheetPasswords.length) return;
   syncPasswordsFromTable();
   const sourceRows = adminState.stores.length
-    ? adminState.stores.map((store) => [store.name, store.storeCode || store.code, store.employeeCode, store.phone, store.count, store.password, store.dataKey, store.hidden ? "是" : "", store.passwordSource])
-    : adminState.sheetPasswords.map((row) => [row.name, row.storeCode || row.code, row.employeeCode, row.phone, "", row.password, row.dataKey, row.hidden ? "是" : "", "Google Sheet"]);
+    ? adminState.stores.map((store) => [store.name, cleanStoreCode(store.storeCode || store.code), store.employeeCode, store.phone, store.count, store.password, store.dataKey, store.hidden ? "是" : "", store.passwordSource])
+    : adminState.sheetPasswords.map((row) => [row.name, cleanStoreCode(row.storeCode || row.code), row.employeeCode, row.phone, "", row.password, row.dataKey, row.hidden ? "是" : "", "Google Sheet"]);
   const rows = [["門市", "店號", "員編", "電話", "會員數", "密碼", "資料鑰匙", "是否隱藏", "來源"], ...sourceRows];
   const csv = rows.map((row) => row.map(SstcCRM.csvCell).join(",")).join("\n");
   SstcCRM.downloadText(`門市密碼清單_${SstcCRM.dateStamp()}.csv`, `\uFEFF${csv}`, "text/csv;charset=utf-8");
@@ -202,7 +202,7 @@ function renderPasswordRowsOnly() {
     ? adminState.stores.map((store) => ({
       id: store.id,
       name: store.name,
-      storeCode: store.storeCode || store.code,
+      storeCode: cleanStoreCode(store.storeCode || store.code),
       employeeCode: store.employeeCode || "",
       count: store.count,
       password: store.password,
@@ -215,7 +215,7 @@ function renderPasswordRowsOnly() {
     : adminState.sheetPasswords.map((row) => ({
       id: SstcCRM.storeId(row.name),
       name: row.name,
-      storeCode: row.storeCode || row.code,
+      storeCode: cleanStoreCode(row.storeCode || row.code),
       employeeCode: row.employeeCode || "",
       count: "",
       password: row.password,
@@ -266,7 +266,7 @@ function hydrateStoresFromCurrentPackage() {
     .map((store) => {
       const rule = findPasswordRule(store.name);
       const rawStoreCode = rule?.storeCode || store.storeCode || store.code || "";
-      const storeCode = isEmployeeCode(rawStoreCode) ? "" : rawStoreCode;
+      const storeCode = cleanStoreCode(rawStoreCode);
       return {
         id: store.id,
         name: store.name,
@@ -296,8 +296,8 @@ function applySheetPasswordsToStores() {
       store.password = sheetRow.password;
       store.dataKey = sheetRow.dataKey || store.dataKey || makeDataKey(store.name);
       const sheetCode = sheetRow.storeCode || sheetRow.code || "";
-      const cleanSheetStoreCode = isEmployeeCode(sheetCode) ? "" : sheetCode;
-      store.storeCode = cleanSheetStoreCode || store.storeCode || store.code || "";
+      const cleanSheetStoreCode = cleanStoreCode(sheetCode);
+      store.storeCode = cleanSheetStoreCode || cleanStoreCode(store.storeCode || store.code) || "";
       store.code = store.storeCode;
       store.employeeCode = sheetRow.employeeCode || (isEmployeeCode(sheetCode) ? sheetCode : "") || store.employeeCode || "";
       store.phone = store.phone || sheetRow.phone || "";
@@ -471,8 +471,8 @@ async function buildLatestPackageWithoutDownload() {
       if (!store) return entry;
       return {
         ...entry,
-        code: store.storeCode || store.code || "",
-        storeCode: store.storeCode || store.code || "",
+        code: cleanStoreCode(store.storeCode || store.code || ""),
+        storeCode: cleanStoreCode(store.storeCode || store.code || ""),
         employeeCode: store.employeeCode || entry.employeeCode || "",
         hidden: Boolean(store.hidden),
       };
@@ -493,8 +493,8 @@ async function buildLatestPackageWithoutDownload() {
     stores.push({
       id: store.id,
       name: store.name,
-      code: store.storeCode || store.code || "",
-      storeCode: store.storeCode || store.code || "",
+      code: cleanStoreCode(store.storeCode || store.code || ""),
+      storeCode: cleanStoreCode(store.storeCode || store.code || ""),
       employeeCode: store.employeeCode || "",
       count: store.count,
       hidden: Boolean(store.hidden),
@@ -584,4 +584,9 @@ function makeDefaultPassword(rule) {
 
 function isEmployeeCode(value) {
   return /^T\d{3}(?:\/T\d{3})*$/i.test(String(value || "").trim());
+}
+
+function cleanStoreCode(value) {
+  const code = String(value || "").trim();
+  return isEmployeeCode(code) ? "" : code;
 }

@@ -174,7 +174,7 @@ function isCustomerFacingStore(store) {
 function enrichStoreMeta(store) {
   const rule = findPasswordRule(store.name);
   const rawStoreCode = rule?.storeCode || store.storeCode || store.code || "";
-  const storeCode = isEmployeeCode(rawStoreCode) ? "" : rawStoreCode;
+  const storeCode = cleanStoreCode(rawStoreCode);
   const employeeCode = store.employeeCode || rule?.employeeCode || (isEmployeeCode(rawStoreCode) ? rawStoreCode : "");
   return {
     ...store,
@@ -185,7 +185,7 @@ function enrichStoreMeta(store) {
 }
 
 function storeLabel(store) {
-  const code = store.storeCode || store.code || "";
+  const code = cleanStoreCode(store.storeCode || store.code || "");
   const codeText = code ? `${code}｜` : "";
   return `${codeText}${store.name} (${SstcCRM.formatNumber(store.count)})`;
 }
@@ -224,6 +224,11 @@ function normalizeStoreName(value, keepArea) {
 
 function isEmployeeCode(value) {
   return /^T\d{3}(?:\/T\d{3})*$/i.test(String(value || "").trim());
+}
+
+function cleanStoreCode(value) {
+  const code = String(value || "").trim();
+  return isEmployeeCode(code) ? "" : code;
 }
 
 async function handleLogin(event) {
@@ -332,7 +337,7 @@ function renderDashboard() {
   const smsCount = rows.filter((row) => yesLike(row.sms)).length;
 
   els.currentStoreName.textContent = portalState.currentStore.name;
-  const code = portalState.currentStore.storeCode || portalState.currentStore.code || "";
+  const code = cleanStoreCode(portalState.currentStore.storeCode || portalState.currentStore.code || "");
   els.currentStoreCode.textContent = code ? `店號 ${code}` : "門市加密資料已解鎖";
   els.metricMembers.textContent = SstcCRM.formatNumber(rows.length);
   els.metricThisMonth.textContent = SstcCRM.formatNumber(rows.filter((row) => row.birthdayMonth === nowMonth).length);
