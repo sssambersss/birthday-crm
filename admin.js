@@ -91,11 +91,11 @@ function renderAdminPanel() {
 
 async function generateEncryptedData() {
   if (!adminState.stores.length) return;
-  syncPasswordsFromTable();
   setStatus("加密資料包產生中...");
   adminEls.generateBtn.disabled = true;
 
   try {
+    await ensureLatestSheetPasswords();
     const stores = [];
     for (const store of adminState.stores) {
       const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.password);
@@ -286,7 +286,7 @@ function setStatus(text) {
 }
 
 async function uploadEncryptedDataToGitHub() {
-  syncPasswordsFromTable();
+  await ensureLatestSheetPasswords();
   if (!adminState.latestPackageText) {
     await buildLatestPackageWithoutDownload();
   }
@@ -342,6 +342,7 @@ async function uploadEncryptedDataToGitHub() {
 
 async function buildLatestPackageWithoutDownload() {
   if (!adminState.stores.length) throw new Error("請先上傳會員 CSV。");
+  await ensureLatestSheetPasswords();
   const stores = [];
   for (const store of adminState.stores) {
     const encrypted = await SstcCRM.encryptJson({ store: store.name, members: store.members }, store.password);
@@ -380,6 +381,15 @@ function base64Utf8(text) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
   }
   return btoa(binary);
+}
+
+async function ensureLatestSheetPasswords() {
+  const sheetUrl = adminEls.sheetUrl.value.trim();
+  if (sheetUrl) {
+    await syncPasswordsFromGoogleSheet({ silent: true });
+  } else {
+    syncPasswordsFromTable();
+  }
 }
 
 function findPasswordRule(storeName) {
