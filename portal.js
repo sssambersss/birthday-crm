@@ -461,7 +461,7 @@ function renderTopCustomers(rows) {
 function renderAreaSummary(rows) {
   const areas = countBy(rows, areaName).filter((item) => item.label);
   els.areaSummaryCount.textContent = `${SstcCRM.formatNumber(areas.length)} 區`;
-  els.areaSummary.innerHTML = `<p class="insight-note">依會員縣市與行政區統計，排序以人數優先、消費金額次之。</p>` + (areas.slice(0, 10).map((item, index) => `
+  els.areaSummary.innerHTML = `<p class="insight-note">依目前篩選條件，按會員縣市與行政區統計，排序以人數優先、消費金額次之。</p>` + (areas.slice(0, 10).map((item, index) => `
     <div class="mini-row">
       <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(item.label)}</strong>
       <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
@@ -478,7 +478,7 @@ function renderSegmentMatrix(rows) {
     return;
   }
   els.segmentMatrix.innerHTML = `
-    <p class="insight-note">交叉比對卡別與累積消費級距，用來看不同卡別的消費分布。</p>
+    <p class="insight-note">依目前篩選條件，交叉比對卡別與累積消費級距，用來看不同卡別的消費分布。</p>
     <div class="matrix-wrap">
       <table class="matrix-table">
         <thead>
@@ -524,7 +524,7 @@ function renderActionLists(rows) {
   ].filter((group) => group.rows.length);
 
   els.actionListCount.textContent = `${SstcCRM.formatNumber(groups.length)} 組`;
-  els.actionLists.innerHTML = `<p class="insight-note">系統依生日月份、消費與點數抓出可優先聯繫的客戶群。</p>` + (groups.length ? groups.map((group, index) => {
+  els.actionLists.innerHTML = `<p class="insight-note">依目前篩選條件，系統按生日月份、消費與點數抓出可優先聯繫的客戶群。</p>` + (groups.length ? groups.map((group, index) => {
     const top = group.rows.slice(0, 5);
     return `
       <div class="mini-group">
