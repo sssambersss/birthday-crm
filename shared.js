@@ -1,5 +1,5 @@
 window.SstcCRM = (() => {
-  const levelOrder = ["黑鑽卡", "金鑽卡", "黑卡", "企業尊榮金卡", "金卡", "銀卡", "普卡", "未分級"];
+  const levelOrder = ["未分級", "普卡", "銀卡", "金卡", "企業尊榮金卡", "黑卡", "金鑽卡", "黑鑽卡"];
   const monthNames = Array.from({ length: 12 }, (_, i) => `${i + 1}月`);
 
   async function readCsvText(file) {

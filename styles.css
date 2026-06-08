@@ -405,28 +405,35 @@ button:disabled {
 }
 
 .area-bar-info {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) max-content;
+  align-items: center;
   gap: 10px;
   min-width: 0;
 }
 
 .area-bar-info strong {
-  display: flex;
-  align-items: center;
   min-width: 0;
   color: var(--ink);
   font-size: 14px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
-.area-bar-info strong .rank-badge {
-  flex: 0 0 auto;
+.area-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: #f4e1e3;
+  color: #8f5f66;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .area-bar-info span:last-child {
-  flex: 0 0 auto;
   color: var(--muted);
   font-size: 12px;
 }
@@ -704,17 +711,17 @@ td.orders {
   }
 
   .area-bar-info {
-    display: grid;
     gap: 2px;
+    grid-template-columns: 26px minmax(0, 1fr);
   }
 
   .area-bar-info strong {
     font-size: 13px;
-    overflow-wrap: anywhere;
   }
 
   .area-bar-info span:last-child {
-    padding-left: 32px;
+    grid-column: 2;
+    padding-left: 0;
   }
 }
 

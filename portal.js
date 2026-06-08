@@ -567,7 +567,8 @@ function renderAreaBars(areas) {
   els.areaChart.innerHTML = areas.map((item, index) => `
     <div class="area-bar-row">
       <div class="area-bar-info">
-        <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(item.label)}</strong>
+        <span class="area-rank">${index + 1}</span>
+        <strong>${SstcCRM.escapeHtml(item.label)}</strong>
         <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
       </div>
       <div class="area-bar-track" aria-hidden="true">
