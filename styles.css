@@ -544,6 +544,13 @@ td.orders {
   font-size: 13px;
 }
 
+.mini-note {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.5;
+}
+
 .mini-customer {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);

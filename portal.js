@@ -9,12 +9,28 @@ const portalState = {
 const salesRanges = [
   { id: "all", label: "全部消費", chartLabel: "全部", min: 0, max: Infinity },
   { id: "0", label: "未消費", chartLabel: "未消費", min: 0, max: 0 },
-  { id: "1-3000", label: "1-3,000", chartLabel: "1-3千", min: 1, max: 3000 },
-  { id: "3001-10000", label: "3,001-10,000", chartLabel: "3千-1萬", min: 3001, max: 10000 },
-  { id: "10001-30000", label: "10,001-30,000", chartLabel: "1-3萬", min: 10001, max: 30000 },
-  { id: "30001-100000", label: "30,001-100,000", chartLabel: "3-10萬", min: 30001, max: 100000 },
+  { id: "1-7999", label: "1-7,999", chartLabel: "8千內", min: 1, max: 7999 },
+  { id: "8000-11999", label: "8,000-11,999", chartLabel: "8千-1.2萬", min: 8000, max: 11999 },
+  { id: "12000-14999", label: "12,000-14,999", chartLabel: "1.2-1.5萬", min: 12000, max: 14999 },
+  { id: "15000-24999", label: "15,000-24,999", chartLabel: "1.5-2.5萬", min: 15000, max: 24999 },
+  { id: "25000-29999", label: "25,000-29,999", chartLabel: "2.5-3萬", min: 25000, max: 29999 },
+  { id: "30000-49999", label: "30,000-49,999", chartLabel: "3-5萬", min: 30000, max: 49999 },
+  { id: "50000-59999", label: "50,000-59,999", chartLabel: "5-6萬", min: 50000, max: 59999 },
+  { id: "60000-99999", label: "60,000-99,999", chartLabel: "6-10萬", min: 60000, max: 99999 },
   { id: "100001", label: "100,001 以上", chartLabel: "10萬+", min: 100001, max: Infinity },
 ];
+
+const upgradeRules = {
+  "普卡": { target: 30000, next: "銀卡", label: "普卡累積滿 30,000 可升銀卡" },
+  "銀卡": { target: 60000, next: "金卡", label: "銀卡累積滿 60,000 可升金卡" },
+  "金卡": { target: 100000, next: "黑卡", label: "金卡累積滿 100,000 可升黑卡" },
+};
+
+const renewalRules = {
+  "銀卡": { target: 8000, label: "銀卡續等需累積滿 8,000" },
+  "金卡": { target: 15000, label: "金卡續等需累積滿 15,000" },
+  "黑卡": { target: 25000, label: "黑卡續等需累積滿 25,000" },
+};
 
 const orderRanges = [
   { id: "all", label: "全部訂單", min: 0, max: Infinity },
@@ -504,41 +520,98 @@ function renderActionLists(rows) {
   const nowMonth = new Date().getMonth() + 1;
   const nextMonth = nowMonth === 12 ? 1 : nowMonth + 1;
   const highValueFloor = highValueThreshold(portalState.currentRows);
+  const upgradeRows = rows
+    .map((row) => ({ row, rule: upgradeRules[row.level], gap: upgradeGap(row) }))
+    .filter((item) => item.rule && item.gap > 0 && item.gap <= Math.max(5000, item.rule.target * 0.2))
+    .sort((a, b) => a.gap - b.gap || b.row.sales - a.row.sales);
+  const renewalRows = rows
+    .map((row) => ({ row, rule: renewalRules[row.level], gap: renewalGap(row) }))
+    .filter((item) => item.rule && item.gap > 0 && item.gap <= Math.max(3000, item.rule.target * 0.35))
+    .sort((a, b) => a.gap - b.gap || b.row.sales - a.row.sales);
   const groups = [
     {
+      title: "快升等會員",
+      note: "累積消費已接近下一個卡別門檻，可優先提醒加購或回訪。",
+      items: upgradeRows,
+      formatter: upgradeActionText,
+    },
+    {
+      title: "快續等會員",
+      note: "目前消費接近續等門檻，可提醒會員把握效期內續等。",
+      items: renewalRows,
+      formatter: renewalActionText,
+    },
+    {
       title: "本月生日高消費",
-      rows: rows.filter((row) => row.birthdayMonth === nowMonth && row.sales >= highValueFloor).sort((a, b) => b.sales - a.sales),
+      items: rows.filter((row) => row.birthdayMonth === nowMonth && row.sales >= highValueFloor).sort((a, b) => b.sales - a.sales).map((row) => ({ row })),
+      formatter: birthdayActionText,
     },
     {
       title: "下月生日可預約",
-      rows: rows.filter((row) => row.birthdayMonth === nextMonth).sort((a, b) => b.sales - a.sales),
+      items: rows.filter((row) => row.birthdayMonth === nextMonth).sort((a, b) => b.sales - a.sales).map((row) => ({ row })),
+      formatter: birthdayActionText,
     },
     {
       title: "消費高但訂單少",
-      rows: rows.filter((row) => row.sales >= highValueFloor && row.orders <= 2).sort((a, b) => b.sales - a.sales),
+      note: "累積消費高但互動次數少，適合由熟客型關懷切入。",
+      items: rows.filter((row) => row.sales >= highValueFloor && row.orders <= 2).sort((a, b) => b.sales - a.sales).map((row) => ({ row })),
+      formatter: simpleActionText,
     },
     {
       title: "有點數可提醒",
-      rows: rows.filter((row) => row.points > 0).sort((a, b) => b.points - a.points),
+      note: "可用點數尚未使用，適合搭配生日月或新品訊息提醒。",
+      items: rows.filter((row) => row.points > 0).sort((a, b) => b.points - a.points).map((row) => ({ row })),
+      formatter: pointsActionText,
     },
-  ].filter((group) => group.rows.length);
+  ].filter((group) => group.items.length);
 
   els.actionListCount.textContent = `${SstcCRM.formatNumber(groups.length)} 組`;
   els.actionLists.innerHTML = `<p class="insight-note">依目前篩選條件，系統按生日月份、消費與點數抓出可優先聯繫的客戶群。</p>` + (groups.length ? groups.map((group, index) => {
-    const top = group.rows.slice(0, 5);
+    const top = group.items.slice(0, 5);
     return `
       <div class="mini-group">
-        <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.rows.length)} 人</strong>
-        ${top.map((row, rowIndex) => `
+        <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(group.title)}：${SstcCRM.formatNumber(group.items.length)} 人</strong>
+        ${group.note ? `<em class="mini-note">${SstcCRM.escapeHtml(group.note)}</em>` : ""}
+        ${top.map((item, rowIndex) => `
           <span class="mini-customer">
             <b>${rowIndex + 1}</b>
-            <em>${SstcCRM.escapeHtml(row.name)}</em>
-            <small>${SstcCRM.money(row.sales)}｜${SstcCRM.formatBirthday(row.birthday)}</small>
+            <em>${SstcCRM.escapeHtml(item.row.name)}</em>
+            <small>${SstcCRM.escapeHtml(group.formatter(item))}</small>
           </span>
         `).join("")}
       </div>
     `;
   }).join("") : `<div class="empty compact-empty">目前沒有可優先經營名單。</div>`);
+}
+
+function upgradeGap(row) {
+  const rule = upgradeRules[row.level];
+  return rule ? rule.target - row.sales : Infinity;
+}
+
+function renewalGap(row) {
+  const rule = renewalRules[row.level];
+  return rule ? rule.target - row.sales : Infinity;
+}
+
+function upgradeActionText(item) {
+  return `${item.row.level}｜${SstcCRM.money(item.row.sales)}｜差 ${SstcCRM.money(item.gap)} 升 ${item.rule.next}`;
+}
+
+function renewalActionText(item) {
+  return `${item.row.level}｜${SstcCRM.money(item.row.sales)}｜差 ${SstcCRM.money(item.gap)} 續等`;
+}
+
+function birthdayActionText(item) {
+  return `${item.row.level}｜${SstcCRM.money(item.row.sales)}｜${SstcCRM.formatBirthday(item.row.birthday)}`;
+}
+
+function simpleActionText(item) {
+  return `${item.row.level}｜${SstcCRM.money(item.row.sales)}｜${SstcCRM.formatNumber(item.row.orders)} 單`;
+}
+
+function pointsActionText(item) {
+  return `${item.row.level}｜${SstcCRM.formatNumber(item.row.points)} 點｜${SstcCRM.money(item.row.sales)}`;
 }
 
 function drawCharts(rows) {
