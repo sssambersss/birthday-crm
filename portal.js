@@ -7,13 +7,13 @@ const portalState = {
 };
 
 const salesRanges = [
-  { id: "all", label: "全部消費", min: 0, max: Infinity },
-  { id: "0", label: "未消費", min: 0, max: 0 },
-  { id: "1-3000", label: "1-3,000", min: 1, max: 3000 },
-  { id: "3001-10000", label: "3,001-10,000", min: 3001, max: 10000 },
-  { id: "10001-30000", label: "10,001-30,000", min: 10001, max: 30000 },
-  { id: "30001-100000", label: "30,001-100,000", min: 30001, max: 100000 },
-  { id: "100001", label: "100,001 以上", min: 100001, max: Infinity },
+  { id: "all", label: "全部消費", chartLabel: "全部", min: 0, max: Infinity },
+  { id: "0", label: "未消費", chartLabel: "未消費", min: 0, max: 0 },
+  { id: "1-3000", label: "1-3,000", chartLabel: "1-3千", min: 1, max: 3000 },
+  { id: "3001-10000", label: "3,001-10,000", chartLabel: "3千-1萬", min: 3001, max: 10000 },
+  { id: "10001-30000", label: "10,001-30,000", chartLabel: "1-3萬", min: 10001, max: 30000 },
+  { id: "30001-100000", label: "30,001-100,000", chartLabel: "3-10萬", min: 30001, max: 100000 },
+  { id: "100001", label: "100,001 以上", chartLabel: "10萬+", min: 100001, max: Infinity },
 ];
 
 const orderRanges = [
@@ -461,7 +461,7 @@ function renderTopCustomers(rows) {
 function renderAreaSummary(rows) {
   const areas = countBy(rows, areaName).filter((item) => item.label);
   els.areaSummaryCount.textContent = `${SstcCRM.formatNumber(areas.length)} 區`;
-  els.areaSummary.innerHTML = `<p class="insight-note">依目前篩選條件，按會員縣市與行政區統計，排序以人數優先、消費金額次之。</p>` + (areas.slice(0, 10).map((item, index) => `
+  els.areaSummary.innerHTML = `<p class="insight-note">依目前篩選條件，列出會員最多的地區；若人數相同，消費金額較高的地區會排前面。</p>` + (areas.slice(0, 10).map((item, index) => `
     <div class="mini-row">
       <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(item.label)}</strong>
       <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
@@ -544,7 +544,7 @@ function renderActionLists(rows) {
 function drawCharts(rows) {
   const months = Array(12).fill(0);
   const levels = new Map();
-  const salesBuckets = salesRanges.filter((range) => range.id !== "all").map((range) => ({ label: range.label, value: 0, range }));
+  const salesBuckets = salesRanges.filter((range) => range.id !== "all").map((range) => ({ label: range.chartLabel || range.label, value: 0, range }));
   const areas = countBy(rows, areaName).filter((item) => item.label).slice(0, 8);
   for (const row of rows) {
     if (row.birthdayMonth) months[row.birthdayMonth - 1] += 1;

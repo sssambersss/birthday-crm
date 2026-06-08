@@ -251,6 +251,7 @@ window.SstcCRM = (() => {
   function labelLines(label) {
     const text = String(label || "");
     if (!text) return [""];
+    if (/[千萬+]/.test(text)) return [text];
     if (text.includes(" ")) return text.split(/\s+/).filter(Boolean).slice(0, 2);
     if (text.length <= 5) return [text];
     return [text.slice(0, 5), text.slice(5, 10)];
