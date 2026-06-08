@@ -555,7 +555,26 @@ function drawCharts(rows) {
   SstcCRM.drawBarChart(els.monthChart, months.map((value, i) => ({ label: `${i + 1}月`, value })), "#c98f95");
   SstcCRM.drawBarChart(els.levelChart, [...levels].sort((a, b) => SstcCRM.levelSorter(a[0], b[0])).map(([label, value]) => ({ label, value })), "#7e7a80");
   SstcCRM.drawBarChart(els.salesChart, salesBuckets.map(({ label, value }) => ({ label, value })), "#a7785d");
-  SstcCRM.drawBarChart(els.areaChart, areas.map((item) => ({ label: item.label, value: item.count })), "#7b8794");
+  renderAreaBars(areas.slice(0, 8));
+}
+
+function renderAreaBars(areas) {
+  const max = Math.max(1, ...areas.map((item) => item.count));
+  if (!areas.length) {
+    els.areaChart.innerHTML = `<div class="empty compact-empty">目前沒有地區資料。</div>`;
+    return;
+  }
+  els.areaChart.innerHTML = areas.map((item, index) => `
+    <div class="area-bar-row">
+      <div class="area-bar-info">
+        <strong><span class="rank-badge">${index + 1}</span>${SstcCRM.escapeHtml(item.label)}</strong>
+        <span>${SstcCRM.formatNumber(item.count)} 人｜${SstcCRM.money(item.sales)}</span>
+      </div>
+      <div class="area-bar-track" aria-hidden="true">
+        <i style="width: ${Math.max(8, Math.round(item.count / max * 100))}%"></i>
+      </div>
+    </div>
+  `).join("");
 }
 
 function exportCurrentCsv() {

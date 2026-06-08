@@ -392,6 +392,59 @@ button:disabled {
   display: block;
 }
 
+.area-bars {
+  display: grid;
+  gap: 12px;
+  min-height: 240px;
+  align-content: center;
+}
+
+.area-bar-row {
+  display: grid;
+  gap: 6px;
+}
+
+.area-bar-info {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.area-bar-info strong {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.area-bar-info strong .rank-badge {
+  flex: 0 0 auto;
+}
+
+.area-bar-info span:last-child {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.area-bar-track {
+  height: 9px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #f2e7e8;
+}
+
+.area-bar-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #7b8794;
+}
+
 .filter-strip {
   grid-template-columns: repeat(5, minmax(130px, 1fr)) minmax(220px, 1.4fr) auto;
   align-items: end;
@@ -619,6 +672,11 @@ td.orders {
   .chart-panel canvas {
     height: 220px;
   }
+
+  .area-bars {
+    min-height: 220px;
+    align-content: start;
+  }
 }
 
 @media (max-width: 620px) {
@@ -643,6 +701,20 @@ td.orders {
   th,
   td {
     padding: 9px 10px;
+  }
+
+  .area-bar-info {
+    display: grid;
+    gap: 2px;
+  }
+
+  .area-bar-info strong {
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+
+  .area-bar-info span:last-child {
+    padding-left: 32px;
   }
 }
 
