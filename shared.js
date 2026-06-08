@@ -201,26 +201,39 @@ window.SstcCRM = (() => {
 
   function drawBarChart(canvas, data, color) {
     const ctx = canvas.getContext("2d");
-    const width = canvas.width;
-    const height = canvas.height;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const width = canvas.clientWidth || canvas.width;
+    const height = canvas.clientHeight || canvas.height;
+    const targetWidth = Math.max(1, Math.round(width * dpr));
+    const targetHeight = Math.max(1, Math.round(height * dpr));
+    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const max = Math.max(1, ...data.map((item) => item.value));
     ctx.clearRect(0, 0, width, height);
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, width, height);
     ctx.strokeStyle = "#e8d6d7";
     ctx.lineWidth = 1;
+    const left = 48;
+    const right = 16;
+    const top = 24;
+    const bottom = data.some((item) => labelLines(item.label).length > 1) ? 78 : 54;
+    const baseline = height - bottom;
     ctx.beginPath();
-    ctx.moveTo(48, 24);
-    ctx.lineTo(48, height - 54);
-    ctx.lineTo(width - 16, height - 54);
+    ctx.moveTo(left, top);
+    ctx.lineTo(left, baseline);
+    ctx.lineTo(width - right, baseline);
     ctx.stroke();
     const gap = 12;
-    const chartWidth = width - 76;
+    const chartWidth = width - left - right - 8;
     const barWidth = Math.max(18, (chartWidth - gap * (data.length - 1)) / data.length);
     data.forEach((item, index) => {
       const x = 56 + index * (barWidth + gap);
-      const barHeight = Math.round((height - 96) * item.value / max);
-      const y = height - 54 - barHeight;
+      const barHeight = Math.round((height - bottom - top - 18) * item.value / max);
+      const y = baseline - barHeight;
       ctx.fillStyle = color;
       ctx.fillRect(x, y, barWidth, barHeight);
       ctx.fillStyle = "#353238";
@@ -228,9 +241,19 @@ window.SstcCRM = (() => {
       ctx.textAlign = "center";
       ctx.fillText(formatNumber(item.value), x + barWidth / 2, Math.max(18, y - 8));
       ctx.fillStyle = "#847b80";
-      ctx.font = "16px Arial";
-      ctx.fillText(item.label, x + barWidth / 2, height - 22);
+      ctx.font = "15px Arial";
+      labelLines(item.label).forEach((line, lineIndex) => {
+        ctx.fillText(line, x + barWidth / 2, baseline + 26 + lineIndex * 18);
+      });
     });
+  }
+
+  function labelLines(label) {
+    const text = String(label || "");
+    if (!text) return [""];
+    if (text.includes(" ")) return text.split(/\s+/).filter(Boolean).slice(0, 2);
+    if (text.length <= 5) return [text];
+    return [text.slice(0, 5), text.slice(5, 10)];
   }
 
   function downloadText(filename, text, type = "application/json;charset=utf-8") {

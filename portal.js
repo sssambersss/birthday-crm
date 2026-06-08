@@ -555,7 +555,7 @@ function drawCharts(rows) {
   SstcCRM.drawBarChart(els.monthChart, months.map((value, i) => ({ label: `${i + 1}月`, value })), "#c98f95");
   SstcCRM.drawBarChart(els.levelChart, [...levels].sort((a, b) => SstcCRM.levelSorter(a[0], b[0])).map(([label, value]) => ({ label, value })), "#7e7a80");
   SstcCRM.drawBarChart(els.salesChart, salesBuckets.map(({ label, value }) => ({ label, value })), "#a7785d");
-  SstcCRM.drawBarChart(els.areaChart, areas.map((item) => ({ label: item.label.slice(0, 5), value: item.count })), "#7b8794");
+  SstcCRM.drawBarChart(els.areaChart, areas.map((item) => ({ label: item.label, value: item.count })), "#7b8794");
 }
 
 function exportCurrentCsv() {
